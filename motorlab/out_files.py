@@ -8,7 +8,7 @@ project_dirs = {'networks' : home + pitt + '/networks',
                 'tuning_change' : home + pitt + '/tuning_change'}
 
 def make_today_dir(project='tuning_change'):
-    outputs = project_dirs[project]
+    outputs = project_dirs[project] + '/outputs'
     today = outputs + '/' + time.strftime('%y%m%d')
     if not os.path.exists(today):
         os.mkdir(today)
