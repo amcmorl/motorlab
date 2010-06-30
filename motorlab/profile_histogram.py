@@ -7,14 +7,6 @@ import time
 from scipy import weave
 from fast_histogram import fast_hist
 
-def make_spiketimes(rate=10., trange=np.array([0, 1])):
-    trange = np.asarray(trange)
-    duration = trange[1] - trange[0]
-    
-    interspike = np.random.exponential(1/rate, size=(rate * duration * 3))
-    spike = np.cumsum(interspike) + trange[0]
-    return spike[spike < trange[1]]
-
 def inline_as_py(values, bins=10, range=None):
         # define bins, size N
     if (range is not None):
