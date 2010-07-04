@@ -42,7 +42,7 @@ def inline_as_py(values, bins=10, range=None):
         raise AttributeError(
             'last element of a must be smaller than first element of bins')
 
-    if (values[0] > bins[0]):
+    if (values[0] >= bins[0]):
         rb = 0;
     else:
         lb = 0;
@@ -57,10 +57,10 @@ def inline_as_py(values, bins=10, range=None):
     lb = 0;
     valid = (rb < nvalues)
     if valid:
-        valid = valid & (values[rb] < bins[nbins - 1])
+        valid = valid & (values[rb] < bins[nbins-1])
     while valid:
         # Advance the edge caret until the current value is in the current bin
-        while (bins[lb+1] < values[rb]):
+        while (bins[lb+1] <= values[rb]):
             lb += 1
         # Increment the current bin
         count[lb] += 1
@@ -69,7 +69,9 @@ def inline_as_py(values, bins=10, range=None):
         valid = (rb < nvalues)
         if valid:
             valid = valid & (values[rb] < bins[nbins - 1])
-
+    if bins[-1] == values[rb]:
+        count[-1] += 1
+        
     return count, bins
 
 def is_correct(hist):
