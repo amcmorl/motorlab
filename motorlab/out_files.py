@@ -17,5 +17,8 @@ def make_today_dir(project='tuning_change'):
 def now_str():
     return time.strftime('%H%M%S')
 
-def get_out_name(save_dir, what):
-    return save_dir + '/' + what + '_' + now_str()
+def get_out_name(save_dir, what, ext=""):
+    oname = save_dir + '/' + what + '_' + now_str()
+    if ext != "":
+        oname += ('.' + ext.lstrip('.')) # make sure there's only one '.'
+    return oname
