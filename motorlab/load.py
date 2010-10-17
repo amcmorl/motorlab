@@ -2,7 +2,7 @@ from git import Repo
 from warnings import warn
 from glob import glob
 from socket import gethostname
-from motorlab.tuning.efile import list_units
+from motorlab.data_files import list_units
 
 '''
 Philosophy is that there is one data store per machine,
