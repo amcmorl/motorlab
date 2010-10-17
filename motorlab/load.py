@@ -2,7 +2,7 @@ from git import Repo
 from warnings import warn
 from glob import glob
 from socket import gethostname
-from motorlab.tuning_change.efile import list_units
+from motorlab.data_files import list_units
 
 days_in_set = ['081309','081409','081709','081809','081909']
 data_locations = \

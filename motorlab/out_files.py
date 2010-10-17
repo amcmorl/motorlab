@@ -1,13 +1,12 @@
 import os
 import time
+import motorlab.tuning
+import motorlab.network
 
-home = os.environ['HOME']
-pitt = '/files/pitt'
+project_dirs = {'network' : motorlab.network.proj_dir,
+                'tuning' : motorlab.tuning.proj_dir}
 
-project_dirs = {'networks' : home + pitt + '/networks',
-                'tuning_change' : home + pitt + '/tuning_change'}
-
-def make_today_dir(project='tuning_change'):
+def make_today_dir(project='tuning'):
     outputs = project_dirs[project] + '/run'
     today = outputs + '/' + time.strftime('%y%m%d')
     if not os.path.exists(today):
