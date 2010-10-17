@@ -2,15 +2,33 @@ from git import Repo
 from warnings import warn
 from glob import glob
 from socket import gethostname
-from motorlab.tuning_change.efile import list_units
+from motorlab.tuning.efile import list_units
 
-days_in_set = ['081309','081409','081709','081809','081909']
-data_locations = \
-    { 'amcopti'  : "/home/amcmorl/files/pitt/frank/data/",
-      'amcnote2' : "/home/amcmorl/files/pitt/frank/offline_sorted_multiday/" }
+'''
+Philosophy is that there is one data store per machine,
+located at `locations[hostname]`, which may or may not be under
+version control. Then there are multiple definitions of
+datasets, which are collections of files or days.
+
+
+'''
+# locations
+locations = {'amcopti'  : "/home/amcmorl/files/pitt/frank/data/",
+             'amcnote2' : \
+                 "/home/amcmorl/files/pitt/frank/offline_sorted_multiday/"}
 uses_git = ['amcopti']
 
+# datasets
+# osmd = offline sorted multiday
+osmd = {days : ['081309','081409','081709','081809','081909'],
+        git : 'offline_sorted_multiday'}
+
+datasets = {'offline sorted multiday' : osmd}
+
 def check_git_status(branch='any'):
+    '''
+    Check git branch of `location` on hostname.
+    '''
     hostname = gethostname()
     if hostname in uses_git:
         repo = Repo(data_locations[hostname])
@@ -20,8 +38,15 @@ def check_git_status(branch='any'):
             raise EnvironmentError("Active branch in data repo is"
                    "%s; %s required." % (repo.active_branch, branch))
 
-def get_file_list(days=days_in_set, data_locs=data_locations,
-                  git_branch='any'):
+def get_file_list(dataset='offline sorted multiday'):
+    '''
+    '''
+    check_git_status(branch=datasets[dataset][git])
+    
+def get_file_list(dataset):
+    '''
+    '''
+    #days=days_in_set, data_locs=data_locations, git_branch='any'
     check_git_status(git_branch)
     data_dir = data_locs[gethostname()]
     file_pat = 'Frank.VR.*.CenterOut.mat'
