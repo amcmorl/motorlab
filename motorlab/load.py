@@ -7,10 +7,10 @@ from motorlab.data_files import list_units
 '''
 Philosophy is that there is one data store per machine,
 located at `locations[hostname]`, which may or may not be under
-version control. Then there are multiple definitions of
-datasets, which are collections of files or days.
+version control.
 
-
+Then there are multiple definitions of datasets,
+which are collections of files or days.
 '''
 # locations
 locations = {'amcopti'  : "/home/amcmorl/files/pitt/frank/data/",
@@ -20,8 +20,8 @@ uses_git = ['amcopti']
 
 # datasets
 # osmd = offline sorted multiday
-osmd = {days : ['081309','081409','081709','081809','081909'],
-        git : 'offline_sorted_multiday'}
+osmd = {'days' : ['081309','081409','081709','081809','081909'],
+        'git' : 'offline_sorted_multiday'}
 
 datasets = {'offline sorted multiday' : osmd}
 
@@ -41,25 +41,21 @@ def check_git_status(branch='any'):
 def get_file_list(dataset='offline sorted multiday'):
     '''
     '''
-    check_git_status(branch=datasets[dataset][git])
-    
-def get_file_list(dataset):
-    '''
-    '''
-    #days=days_in_set, data_locs=data_locations, git_branch='any'
-    check_git_status(git_branch)
-    data_dir = data_locs[gethostname()]
+    dset = datasets[dataset]
+    check_git_status(branch=dset['git'])
+    data_dir = locations[gethostname()]
     file_pat = 'Frank.VR.*.CenterOut.mat'
     files = []
-    for day in days:
-        files.extend(glob(data_dir + day + '/' + file_pat))
+    if 'files' in dset.keys():
+        files.extend(dset['files'])
+    if 'days' in dset.keys():
+        for day in dset['days']:
+            files.extend(glob(data_dir + day + '/' + file_pat))
     files.sort()
     return files
 
-def get_units_list(days=days_in_set, data_locs=data_locations,
-                   git_branch='any'):
-    file0 = get_file_list(days=days, data_locs=data_locs,
-                          git_branch=git_branch)[0]
+def get_units_list(dataset='offline sorted multiday'):
+    file0 = get_file_list(dataset=dataset)[0]
     return list_units(file0)
 
 def pick_units(units, cond='>100'):
