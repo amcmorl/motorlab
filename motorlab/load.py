@@ -21,17 +21,25 @@ uses_git = ['amcopti']
 # datasets
 # osmd = offline sorted multiday
 osmd = {'days' : ['081309','081409','081709','081809','081909'],
-        'git' : 'offline_sorted_multiday'}
+        'git' : 'offline_sorted_multiday',
+        'aliases' : ['offline sorted multiday', 'osmd',
+                     'offline_sorted_multiday']}
 
 datasets = {'offline sorted multiday' : osmd}
-
+# generate dataset_aliases
+aliases = {}
+for name, dset in datasets.iteritems():
+    if 'aliases' in dset.keys():
+        for alias in dset['aliases']:
+            aliases[alias] = name
+        
 def check_git_status(branch='any'):
     '''
     Check git branch of `location` on hostname.
     '''
     hostname = gethostname()
     if hostname in uses_git:
-        repo = Repo(data_locations[hostname])
+        repo = Repo(locations[hostname])
         if branch == 'any':
             warn("Active branch in data repo is %s" % (repo.active_branch))
         elif not repo.active_branch == branch:
@@ -41,7 +49,8 @@ def check_git_status(branch='any'):
 def get_file_list(dataset='offline sorted multiday'):
     '''
     '''
-    dset = datasets[dataset]
+    dset_name = aliases[dataset]
+    dset = datasets[dset_name]
     check_git_status(branch=dset['git'])
     data_dir = locations[gethostname()]
     file_pat = 'Frank.VR.*.CenterOut.mat'
