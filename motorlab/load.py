@@ -25,7 +25,13 @@ osmd = {'days' : ['081309','081409','081709','081809','081909'],
         'aliases' : ['offline sorted multiday', 'osmd',
                      'offline_sorted_multiday']}
 
-datasets = {'offline sorted multiday' : osmd}
+# small - just one day of osmd
+small = {'days' : ['081309'],
+         'git' : 'offline_sorted_multiday',
+         'aliases' : ['sm', 'small']}
+
+datasets = {'offline sorted multiday' : osmd,
+            'small' : small}
 # generate dataset_aliases
 aliases = {}
 for name, dset in datasets.iteritems():
