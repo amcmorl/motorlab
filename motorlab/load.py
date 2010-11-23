@@ -24,13 +24,22 @@ osmd = {'days' : ['081309','081409','081709','081809','081909'],
         'git' : 'offline_sorted_multiday',
         'aliases' : ['offline sorted multiday', 'osmd',
                      'offline_sorted_multiday']}
+
+# offline sorted reasonable - day that Jeong-Woo uses mostly
 osr = {'days' : ['070109'],
        'git' : 'offline_sorted_reasonable',
        'aliases' : ['offline sorted reasonable', 'osr',
                     'offline_sorted_reasonable']}
 
+# small - just one day of osmd
+small = {'days' : ['081309'],
+         'git' : 'offline_sorted_multiday',
+         'aliases' : ['sm', 'small']}
+
 datasets = {'offline sorted multiday' : osmd,
-            'offline sorted reasonable' : osr}
+            'offline sorted reasonable' : osr,
+            'small' : small}
+
 # generate dataset_aliases
 aliases = {}
 for name, dset in datasets.iteritems():
