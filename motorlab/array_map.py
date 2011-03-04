@@ -116,7 +116,7 @@ def _convert_hd_chan_to_array_pos(chan, array_map):
 
 # exposed API
 def display_array(plx_chans, array_map, cables=default_cables, values=None,
-                  cmap=mpl.cm.gray, verbose=False):
+                  cmap=mpl.cm.gray, verbose=False, vmin=None, vmax=None):
     '''
     Draw an image of the array with channels coded according to values
     
@@ -161,8 +161,15 @@ def display_array(plx_chans, array_map, cables=default_cables, values=None,
         else:
             disp_arr[ar_x, ar_y] = 1
     fig = plt.figure(figsize=(8,8))
-    ax = fig.add_axes([0,0,1,1])
-    ax.imshow(disp_arr, interpolation='nearest', cmap=cmap, vmin=0, vmax=20)
+    ax = fig.add_axes([0.02,0.00,0.96,1.])
+    if vmin == None:
+        vmin = np.min(disp_arr)
+    if vmax == None:
+        vmax = np.max(disp_arr)
+    ax.imshow(disp_arr, interpolation='nearest', cmap=cmap,
+              vmin=vmin, vmax=vmax, origin='lower')
+    ax.text(1.005,0.5, '|', fontsize='small',
+            transform=ax.transAxes, rotation='vertical')
     ax.set_xticks([])
     ax.set_yticks([])
     plt.draw()
@@ -195,8 +202,10 @@ def load_array_map(filename):
     lines = f.readlines()
     array_map = {}
     for line in lines:
-        wire, elec = [int(x) for x in line.split()]
-        array_map["%02d" % (wire,)] = _convert_elec_to_row_col(elec)
+        if not line[0] == '#':
+            # ignore lines starting with # as comments
+            wire, elec = [int(x) for x in line.split()]
+            array_map["%02d" % (wire,)] = _convert_elec_to_row_col(elec)
     return array_map
 
 

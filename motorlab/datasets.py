@@ -31,7 +31,8 @@ class DatasetSimpleUnitID(object):
         if self.branch != 'no git':
             repo = Repo(self.root)
             if self.branch == 'any':
-                warn("Active branch in data repository is %s" % (repo.active_branch))
+                warn("Active branch in data repository is %s" % \
+                         (repo.active_branch))
             elif not repo.active_branch == self.branch:
                 raise EnvironmentError("Active branch in data repository is"
                                        "%s, but %s is required." %
@@ -50,13 +51,6 @@ class DatasetSimpleUnitID(object):
         file0 = self.get_files()[0]
         return list_units(file0)
     
-    def get_suppl(self):
-        pass
-
-class Location(object):
-    def __init__(self):
-        pass
-
 # construct datasets database from config file
 config = ConfigParser()
 config.read(datasets_config)
@@ -69,8 +63,9 @@ for dataset_name in config.sections():
         git_branch = config.get(dataset_name, 'git_branch')
         datasets[dataset_name] = DatasetSimpleUnitID(root, git_branch, days)
     else:
+        
         warn('Cannot handle non-simple dataset types yet.')
-
+    
 def pick_units_by_number(units, cond='>100'):
     '''
     Select a subset of units based on `condition` relative to their unit_num.
@@ -84,4 +79,6 @@ def pick_units_by_number(units, cond='>100'):
     return out
 
 def get_m1_units_from_unit_name(unit_name):
+    '''selects units 100 - 199, which are from the M1 array, at least in Frank
+    '''
     return np.asarray([x[4] == '1' for x in unit_name])

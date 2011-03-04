@@ -68,7 +68,8 @@ class CenOut_VR_RTMA_10_File(ExpFile):
         self.StartPos = self.trials.StartPos
         self.PlexonTrialTime = self.trials.PlexonTrialTime
         self.kins = file_dat['kinematics']
-        self.spikes = np.asarray(file_dat['spikes'])
+        #self.spikes = np.asarray(file_dat['spikes'])
+        self.spikes = file_dat['spikes']
         fix_kin(self.kins, file_dat['header'].CursorTransform)
 
     def sort_spikes(self, unit, lag=0.):
@@ -88,7 +89,8 @@ class CenOut_VR_RTMA_10_File(ExpFile):
           each item is spike times in a given trial,
           relative to PlexonTrialTime for that trial start'''
         spikes_sorted = []
-        spike_times = np.asarray(self.spikes.item().__dict__[unit] + lag)
+        #spike_times = np.asarray(self.spikes.item().__dict__[unit] + lag)
+        spike_times = np.asarray(self.spikes.__dict__[unit] + lag)
         n_trials = self.trials.PlexonTrialTime.size
         for i in xrange(0, n_trials):
             valid_spikes = np.asarray( \

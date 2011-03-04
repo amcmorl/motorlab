@@ -12,8 +12,8 @@ def make_26_targets():
       x,y,z points on a sphere of radius sqrt(3.)
       shape (26, 3)
     circs : ndarray
-      indices into `pts` or `spts` of points on each great circle
-      shape (4, 8)
+      indices into `pts` or `spts` of points on each polar (i.e. N & S)
+      great circle, shape (4, 8)
     '''
     # corners
     pts = np.mgrid[-1:2:1,-1:2:1, -1:2:1].reshape(3,27).T
