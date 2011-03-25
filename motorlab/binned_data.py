@@ -153,10 +153,29 @@ class BinnedData:
             return res.squeeze()
         else:
             return res
+    
+    def get_rates(self, squeeze=False):    
+        '''
+        Returns firing rates (count / window durations).
+        '''
+        if self.count == None:
+            raise ValueError('count component does not exist.')
+        ntask, nrep = self.pos.shape[0:2]
+        ndset, nbin = self.count.shape[2:]
+
+        count = self.count
+        window = np.diff(self.bin_edges, axis=-1)
+        window = np.tile(window[:,:,None], (1, 1, ndset, 1))
+        rate = count / window        
+        
+        if squeeze:
+            return rate.squeeze()
+        else:
+            return rate
         
     def get_rates_flat(self, with_nans=True, squeeze=False):
         '''
-        Returns flattened version of firing rates (count / window sizes),
+        Returns flattened version of firing rates (count / window durations),
         with all trials iterated in first dimension.
         
         Parameters
@@ -171,26 +190,20 @@ class BinnedData:
         PSTHs_flat : ndarray
           flattened PSTHs, shape (ntask * nrep, nunit, nbin)
         '''
-        if self.count == None:
-            raise ValueError('count component does not exist.')
-
+        rate = self.get_rates(squeeze=squeeze)
+        
         ntask, nrep = self.pos.shape[0:2]
         ndset, nbin = self.count.shape[2:]
         if not with_nans:
             notnans = self.get_notnans()
         else:
             notnans = slice(None)
-
-        count = self.count
-        window = np.diff(self.bin_edges, axis=-1)
-        window = np.tile(window[:,:,None], (1, 1, ndset, 1))
-        rate = count / window
+        flatrate  = rate.reshape(ntask * nrep, ndset, nbin)[notnans]
         
-        res  = rate.reshape(ntask * nrep, ndset, nbin)[notnans]
         if squeeze:
-            return res.squeeze()
+            return flatrate.squeeze()
         else:
-            return res
+            return flatrate
         
     def get_pos_flat(self, with_nans=True):
         '''
@@ -444,17 +457,19 @@ def load_binned_data(file):
       filename or object from which to load data
     '''
     bdf = np.load(file)
-    bd = BinnedData(bdf['count'],
-                    bdf['bin_edges'],
-                    bdf['pos'],
-                    bdf['tasks'],
-                    bdf['unit_names'],
-                    bdf['lags'],
-                    bdf['align'])
+    bnd = BinnedData(bdf['bin_edges'],
+                     bdf['pos'],
+                     bdf['tasks'],
+                     bdf['unit_names'],
+                     bdf['align'])
+    if 'count' in bdf.files:
+        bnd.count = bdf['count']
+    if 'lags' in bdf.files:
+        bnd.lags = bdf['lags']
     if ('align_start_bins' in bdf.files) & ('align_end_bins' in bdf.files):
-        bd.align_start_bins = bdf['align_start_bins']
-        bd.align_end_bins = bdf['align_end_bins']
-    return bd
+        bnd.align_start_bins = bdf['align_start_bins']
+        bnd.align_end_bins = bdf['align_end_bins']
+    return bnd
 
 def has(obj, item):
     return item in obj.__dict__.keys()
