@@ -770,7 +770,7 @@ def sort_unique_tasks(starts, targets):
     assert targets.shape[1] == 3
 
     combined = np.concatenate((starts, targets), axis=1)
-    np.savez('urgle.npz', data=combined)
+    #np.savez('urgle.npz', data=combined)
 
     # explicitly require that `combined` is in C_CONTIGUOUS order
     # which is necessary for view-typing in next step
