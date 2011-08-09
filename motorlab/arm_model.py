@@ -1,13 +1,13 @@
 import numpy as np
 import types
 import vectors
-from enthought.mayavi import mlab
+from mayavi import mlab
 p3d = mlab.pipeline
 shoulder_length = 0.2
 
 # ----------------------------------------------------------------------------
 
-class Bone():
+class Bone(object):
     '''
     Provides functionality common to all bones - defining some properties,
     drawing and erasing. Must be inherited from in order to be useful.
@@ -316,9 +316,6 @@ def convert_cartesian_to_joint_space(xyz, arm):
     
 # ----------------------------------------------------------------------------
 
-if __name__ == "__main__":
-    pass
-
 def setup():
     sc = mlab.figure(0)
     mlab.view(90., -90., 3.)
@@ -334,3 +331,7 @@ def run(neuron, arm):
 def reset_view():
     mlab.view(90., -90., 3.)
     mlab.roll(90.)
+
+if __name__ == "__main__":
+    neuron, arm = setup()
+    run(neuron, arm)

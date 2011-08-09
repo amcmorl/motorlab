@@ -1,12 +1,13 @@
 import numpy as np
-from motorlab.data_files import CenOut_VR_RTMA_10_File, \
-    CenOut_3d_data_21_File, versions
+from motorlab.data_files import CenOut_VR_RTMA_10_File, versions
 import motorlab.tuning.util as tc_util
 from warnings import warn
 from scipy.interpolate import splprep, splev
-from vectors import norm, unitvec
+from vectors import unitvec
 from motorlab.binned_data import BinnedData
 import motorlab.tuning.calculate.kinematics as kin
+from identified_unit import IdentifiedUnit
+import os.path
 
 '''
 want to have something that:
@@ -15,6 +16,28 @@ want to have something that:
   extracts spike times and bins as required
 '''
 align_types = ["all", "speed", "hold", "323 simple", "323 movement"]
+
+def get_full_name_from_units_and_files(us, fs):
+    '''
+    Return the full name of the unit derived from unit name in the 
+    first file name.
+    
+    Parameters
+    ----------
+    files : list of string
+      full file names
+    units : list of string
+      channel/id numbers
+    
+    Returns
+    -------
+    full_name : string
+      full name of unit
+    '''
+    first_file = os.path.split(fs[0])[-1]
+    first_file = os.path.splitext(first_file)[0].replace('.', '_')
+    first_unit = us[0]
+    return first_file + '_' + first_unit
 
 def _add_to_array(array, to_add):
     assert (type(array) == type(None)) | (type(array) == type(np.array(0)))
@@ -44,71 +67,8 @@ def _interpolate_position(positions, bins, s=0., k=5, nest=-1):
     tckp, u = splprep([x,y,z], u=t, s=s, k=k, nest=nest)
     xnew, ynew, znew = splev(bins, tckp)
     return np.vstack((xnew,ynew,znew)).T
-
-class Unit:
-    '''
-    Container for a unit, spikes and name.
-
-    Attributes
-    ----------
-    parent : DataCollection
-      collection of raw data to which this units spikes belong
-    unit_name : string
-      name of unit, channel and sort, e.g. 'Unit001_1'
-    lag : float
-      lag time between neural and movement data
-      positive lag implies neural event precedes kinematic
-
-    
-    Parameters
-    ----------
-    unit_name : string
-      see Attributes
-    lag : float
-      see Attributes
-    datacollection : DataCollection
-      see Attributes
-    '''
-    def __init__(self, unit_name, lag, datacollection):
-        self.parent = datacollection
-        self.unit_name = unit_name
-        self.lag = lag
-        self.spikes = []
-        self.get_spikes()
-
-        # check that the number of trials is consistent with other data
-        assert len(self.spikes) == len(self.parent.HoldAStart)
-
-    def get_full_name(self):
-        '''
-        Return the full name of the unit derived from unit name and lag.
-        
-        Returns
-        -------
-        full_name : string
-          full name of unit including lag, in format "Unit001_1_100ms"
-        '''
-        return self.unit_name + '_%dms' % int(self.lag * 1e3)
-        
-    def get_spikes(self):
-        '''
-        Populates spike data from .mat file
-        '''
-        # pick correct file handling routine
-        if self.parent.version == 'VR_RTMA_1.0':
-            opener = CenOut_VR_RTMA_10_File
-        elif self.parent.version == '3d_data_2.1':
-            opener = CenOut_3d_data_21_File
-        else:
-            raise ValueError("Not a recognized format.")
-
-        for file_name in self.parent.files:
-            # open file and grab sorted spikes
-            exp_file = opener(file_name)
-            file_spikes = exp_file.sort_spikes(self.unit_name, lag=self.lag)
-            self.spikes.extend(file_spikes)
             
-class DataCollection:
+class IdentifiedDataCollection:
     '''
     A collection of raw data collated from a number of .mat files. One
     DataCollection contains one set of positions and trial times,
@@ -148,8 +108,8 @@ class DataCollection:
         self.positions = []
         self.HoldAStart = self.HoldAFinish = None
         self.HoldBStart = self.HoldBFinish = None
-        self.TargetPos = self.StartPos = None
-        self.ReactionFinish = None
+        self.TargetPos  = self.StartPos    = None
+        self.ReactionFinish  = None
         self.PlexonTrialTime = None
         
         for file in files:
@@ -577,24 +537,24 @@ class DataCollection:
         Parameters
         ----------
         units_list : list
-          each element is (unit_name, lag)
+          each element is (unit_names_list, lag)
           see DataCollection.add_unit for details
         '''
-        for unit, lag in units_list:
-            self.add_unit(unit, lag)
+        for units, lag in units_list:
+            self.add_unit(units, lag)
     
-    def add_unit(self, unit_name, lag):
+    def add_unit(self, unit_names, lag):
         '''
         Add a single unit to data collection.
         
         Parameters
         ----------
-        unit_name : string
-          name of unit in data files, e.g. Unit001_1
+        unit_name : list of string
+          name of unit in each data file, e.g. Unit001_1
         lag : float
           lag time in ms
         '''
-        self.units.append(Unit(unit_name, lag, self))
+        self.units.append(IdentifiedUnit(unit_names, lag, self))
 
     def _get_limits(self, align):
         if align == 'all':
@@ -644,7 +604,8 @@ class DataCollection:
         #assert len(self.units) > 0
         assert type(nbin) == int
         assert align in align_types
-        align_starts, align_stops, bin_starts, bin_stops = self._get_limits(align)
+        align_starts, align_stops, bin_starts, bin_stops = \
+            self._get_limits(align)
         do_spike = (do_count or do_rate)
         
         # sort n_trials trials into n_dirs directions
@@ -686,7 +647,8 @@ class DataCollection:
             dir_idx = tc_util.get_task_idx( \
                 self.StartPos[i], self.TargetPos[i], self.tasks)
 
-            bins = np.linspace(bin_starts[i], bin_stops[i], nbin + 1, endpoint=True)
+            bins = np.linspace(bin_starts[i], bin_stops[i], nbin + 1, \
+                                   endpoint=True)
             
             if (nunit > 0) & do_spike:
                 if do_count:
@@ -742,13 +704,13 @@ class DataCollection:
                 dirs_count[dir_idx] += 1
                 #... keep track of next row to enter for this direction
 
-        unit_names = [u.unit_name for u in self.units]
+        unit_names = [u.unit_names for u in self.units]
         lags = [u.lag for u in self.units]
         return BinnedData(bin_edges, pos, self.tasks, unit_names, align,
                           lags=lags, count=counts, unbiased_rate=rates,
                           align_start_bins=align_start_bins,
-                          align_end_bins=align_end_bins)
-
+                          align_end_bins=align_end_bins,
+                          files=self.files)
     
 # utility functions
 def sort_unique_tasks(starts, targets):
@@ -770,22 +732,27 @@ def sort_unique_tasks(starts, targets):
     assert targets.shape[1] == 3
 
     combined = np.concatenate((starts, targets), axis=1)
-    np.savez('urgle.npz', data=combined)
-
-    # explicitly require that `combined` is in C_CONTIGUOUS order
-    # which is necessary for view-typing in next step
-    # (apparently previous trick of adding 0. doesn't work anymore)
-    combined = np.require(combined, requirements='C')
-
-    uniques = np.unique(combined.view(dtype=[('sx', np.float),
-                                             ('sy', np.float),
-                                             ('sz', np.float),
-                                             ('tx', np.float),
-                                             ('ty', np.float),
-                                             ('tz', np.float)]))
+    c2 = np.require(combined, requirements='C')
+#    uniques = np.unique((combined + 0.).view(dtype=[('sx', np.float),
+#                                                    ('sy', np.float),
+#                                                    ('sz', np.float),
+#                                                    ('tx', np.float),
+#                                                    ('ty', np.float),
+#                                                    ('tz', np.float)]))
+    uniques = np.unique((c2).view(dtype=[('sx', np.float),
+                                         ('sy', np.float),
+                                         ('sz', np.float),
+                                         ('tx', np.float),
+                                         ('ty', np.float),
+                                         ('tz', np.float)]))               
+                                                    
     n_unique = uniques.size
     unique_tasks = uniques.view(dtype=np.float).reshape(n_unique, 6)
     inds = np.lexsort(unique_tasks.T[-1::-1])
+    
+    if not len(unique_tasks) in [52,28]:
+        raise ValueError("Wrong number of tasks found!")
+    
     # Technically the lexsort is not needed since np.unique seems to sort
     # this way anyway, but I prefer to do it explicitly.
     # If speed is ever an issue, this can be revised.

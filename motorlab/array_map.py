@@ -56,7 +56,8 @@ def get_chans_values_lists(chans):
 # remap plexon channels to headstage channels
 def _remap_plx_to_headstages(plx_chan, cables=default_cables, verbose=False):
     '''
-    Convert plexon channel numbers to headstage channel numbers, which takes care of cable setup between plexon box and headstage.
+    Convert plexon channel numbers to headstage channel numbers, 
+    which takes care of cable setup between plexon box and headstage.
 
     Parameters
     ----------
@@ -177,6 +178,19 @@ def display_array(plx_chans, array_map, cables=default_cables, values=None,
 
     
 def _convert_elec_to_row_col(elec):
+    '''
+    Used in load_array_map to convert electrode numbers to 0-based index
+    grid positions.
+    
+    Notes
+    -----
+    array map per Blackrock is:
+    
+     1  2  3  4  5  6  7  8  9  10
+    11 12...
+    
+    i.e. zeros are last, not first
+    '''
     # make 0 first
     elec -= 1
     row = elec / 10

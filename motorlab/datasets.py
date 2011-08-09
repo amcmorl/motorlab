@@ -82,3 +82,14 @@ def get_m1_units_from_unit_name(unit_name):
     '''selects units 100 - 199, which are from the M1 array, at least in Frank
     '''
     return np.asarray([x[4] == '1' for x in unit_name])
+    
+def get_nice_name(unit_name):
+    '''
+    Convert a name in the Unit012_3 format to 12c format.
+    '''
+    channel, sub = unit_name.split('_')
+    if channel.startswith('Unit'):
+        channel = str(int(channel[4:]))
+    offset = ord('a') - ord('1')
+    sub = chr(ord(sub) + offset)   
+    return channel + sub

@@ -32,9 +32,6 @@ class BinnedData:
       
     Parameters
     ----------
-    PSTHs : ndarray
-      binned spike counts, sorted by task and repeats
-      shape (ntask, nrep, nunit, nbin)
     bin_edges : ndarray
       bin edge times, sorted as per PSTHs
       shape (ntask, nrep, nbin + 1)
@@ -55,7 +52,8 @@ class BinnedData:
                  lags=None,
                  align_start_bins=None,
                  align_end_bins=None,
-                 scaled_spikes=None):
+                 scaled_spikes=None,
+                 files=None):
         '''
         Anything here?
         '''
@@ -76,6 +74,7 @@ class BinnedData:
         self.align_start_bins = align_start_bins
         self.align_end_bins = align_end_bins
         self.scaled_spikes = scaled_spikes
+        self.files = files
             
     def get_notnans(self):
         '''
@@ -122,9 +121,9 @@ class BinnedData:
         else:
             return res
 
-    def get_unbiased_rates_flat(self, with_nans=True, squeeze=False):
+    def get_unbiased_rate_flat(self, with_nans=True, squeeze=False):
         '''
-        Returns flattened version of count, with all trials iterated
+        Returns flattened version of unbiased_rate, with all trials iterated
         in first dimension.
         
         Parameters
@@ -139,16 +138,16 @@ class BinnedData:
         count_flat : ndarray
           flattened PSTHs, shape (ntask * nrep, nunit, nbin)
         '''
-        if self.unbiased_rates == None:
+        if self.unbiased_rate == None:
             raise ValueError('unbiased_rates component does not exist.')
         
         ntask, nrep = self.pos.shape[0:2]
-        ndset, nbin = self.unbiased_rates.shape[2:]
+        ndset, nbin = self.unbiased_rate.shape[2:]
         if not with_nans:
             notnans = self.get_notnans()
         else:
             notnans = slice(None)
-        res  = self.count.reshape(ntask * nrep, ndset, nbin)[notnans]
+        res  = self.unbiased_rate.reshape(ntask * nrep, ndset, nbin)[notnans]
         if squeeze:
             return res.squeeze()
         else:
@@ -425,10 +424,13 @@ class BinnedData:
                 'tasks'      : self.tasks,
                 'unit_names' : self.unit_names,
                 'lags'       : self.lags,
-                'align'      : self.align}
+                'align'      : self.align,
+                'files'      : self.files}
         if self.full_output:
             data['align_start_bins'] = self.align_start_bins
             data['align_start_bins'] = self.align_end_bins
+        if self.unbiased_rate != None:
+            data['unbiased_rate'] = self.unbiased_rate
         np.savez(file, **data)
 
     def ensure_flat_inplace(self):
@@ -446,6 +448,55 @@ class BinnedData:
             self.pos_flat = self.pos.reshape(n_tasks * n_reps, n_bins + 1, 3)
             self.count_flat = self.count.reshape(n_tasks * n_reps,
                                                  n_dsets, n_bins)
+                                                 
+    def __add__(self, other):
+        '''
+        Add two bnds together.
+        
+        Combines count along `unit` axis, appends lags and unit_names.
+        Checks bin_edges, pos, tasks, files, align are the same.
+        are the same. Doesn't handle unbiased rates for now.
+        '''
+        # check type
+        if type(other) != type(self):
+            raise ValueError('Only two BinnedData instances can be added.')
+        
+        # check bin_edges
+        a = self.bin_edges
+        b = other.bin_edges        
+        if not np.all(a[~np.isnan(a)] == b[~np.isnan(b)]):
+            raise ValueError('bin_edges are not the same')
+            
+        # check pos
+        a = self.pos
+        b = other.pos
+        if not np.all(a[~np.isnan(a)] == b[~np.isnan(b)]):
+            raise ValueError('pos are not the same')
+        
+        # check tasks
+        a = self.tasks
+        b = other.tasks
+        if not np.all(a[~np.isnan(a)] == b[~np.isnan(b)]):
+            raise ValueError('tasks are not the same')
+        
+        # check align
+        if not np.all(self.align == other.align):
+            raise ValueError('align is not the same')
+            
+        # check files
+        if not np.all(self.files == other.files):
+            raise ValueError('files are not the same')
+            
+        # combine stuff to be combined
+        a = self
+        b = other
+        new_count = np.concatenate([a.count, b.count], axis=2)
+        new_unames = np.concatenate([a.unit_names, b.unit_names], axis=0)
+        new_lags = np.concatenate([a.lags, b.lags], axis=0)
+        
+        return BinnedData(self.bin_edges, self.pos, self.tasks,
+                          new_unames, self.align, count=new_count,
+                          lags=new_lags, files=self.files)
 
 def load_binned_data(file):
     '''
@@ -466,9 +517,13 @@ def load_binned_data(file):
         bnd.count = bdf['count']
     if 'lags' in bdf.files:
         bnd.lags = bdf['lags']
+    if 'unbiased_rate' in bdf.files:
+        bnd.unbiased_rate = bdf['unbiased_rate']
     if ('align_start_bins' in bdf.files) & ('align_end_bins' in bdf.files):
         bnd.align_start_bins = bdf['align_start_bins']
         bnd.align_end_bins = bdf['align_end_bins']
+    if 'files' in bdf.files:
+        bnd.files = bdf['files']
     return bnd
 
 def has(obj, item):
