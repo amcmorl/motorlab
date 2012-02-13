@@ -426,9 +426,10 @@ class BinnedData:
                 'lags'       : self.lags,
                 'align'      : self.align,
                 'files'      : self.files}
-        if self.full_output:
+        if self.__dict__.has_key('align_start_bins'):
             data['align_start_bins'] = self.align_start_bins
-            data['align_start_bins'] = self.align_end_bins
+        if self.__dict__.has_key('align_end_bins'):
+            data['align_end_bins'] = self.align_end_bins
         if self.unbiased_rate != None:
             data['unbiased_rate'] = self.unbiased_rate
         np.savez(file, **data)

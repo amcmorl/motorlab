@@ -148,8 +148,8 @@ class DataCollection:
         self.positions = []
         self.HoldAStart = self.HoldAFinish = None
         self.HoldBStart = self.HoldBFinish = None
-        self.TargetPos = self.StartPos = None
-        self.ReactionFinish = None
+        self.TargetPos  = self.StartPos    = None
+        self.ReactionFinish  = None
         self.PlexonTrialTime = None
         
         for file in files:
@@ -644,7 +644,8 @@ class DataCollection:
         #assert len(self.units) > 0
         assert type(nbin) == int
         assert align in align_types
-        align_starts, align_stops, bin_starts, bin_stops = self._get_limits(align)
+        align_starts, align_stops, bin_starts, bin_stops = \
+            self._get_limits(align)
         do_spike = (do_count or do_rate)
         
         # sort n_trials trials into n_dirs directions
@@ -686,7 +687,8 @@ class DataCollection:
             dir_idx = tc_util.get_task_idx( \
                 self.StartPos[i], self.TargetPos[i], self.tasks)
 
-            bins = np.linspace(bin_starts[i], bin_stops[i], nbin + 1, endpoint=True)
+            bins = np.linspace(bin_starts[i], bin_stops[i], nbin + 1, \
+                                   endpoint=True)
             
             if (nunit > 0) & do_spike:
                 if do_count:
@@ -747,9 +749,9 @@ class DataCollection:
         return BinnedData(bin_edges, pos, self.tasks, unit_names, align,
                           lags=lags, count=counts, unbiased_rate=rates,
                           align_start_bins=align_start_bins,
-                          align_end_bins=align_end_bins)
+                          align_end_bins=align_end_bins,
+                          files=self.files)
 
-    
 # utility functions
 def sort_unique_tasks(starts, targets):
     '''Return unique items sort in ascending order.
