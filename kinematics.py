@@ -1,6 +1,6 @@
 import numpy as np
-import proc_tools
-from vecgeom import norm, unitvec
+import amcmorl_py_tools.proc_tools
+from amcmorl_py_tools.vecgeom import norm, unitvec
 
 def get_vel(pos, time, tax=0, spax=-1):
     ''' Get instantaneous velocity
