@@ -111,6 +111,28 @@ def calc_pcs_mdp(bnd, npc=None, preaverage=False, use_unbiased=False):
     weight = pca_node.get_projmatrix()
     return score.T, weight.T
     
+def calc_pcs_variance_explained_mdp(bnd, preaverage=False, 
+                                   use_unbiased=False):
+    '''
+    Parameters
+    ----------
+    bnd : BinnedData
+      binned data
+    preaverage : bool
+      average across repeats?
+    use_unbiased : False
+      use the unbiased spike rates calculated using Rob Kass's
+      spike rate method
+    '''
+    data = format_for_fa(bnd, preaverage=preaverage,
+                         use_unbiased=use_unbiased)
+    pca_node = mdp.nodes.PCANode()
+    # have to run execute to calculate attributes
+    score = pca_node.execute(data)
+    eigvals = pca_node.d
+    var_explained = eigvals / eigvals.sum()
+    return var_explained
+    
 def _check_pca(data, weight, score):
     norm_data = data - stats.nanmean(data)
     assert_array_almost_equal(np.dot(norm_data, weight), score)
@@ -122,7 +144,7 @@ def project(data, weight):
     
 # scikits.learn ###############################################################
 
-def calc_pcs_learn(bnd, npc=None):
+def calc_pcs_learn(bnd, npc=None, preaverage=False):
     '''
     Parameters
     ----------
@@ -131,8 +153,8 @@ def calc_pcs_learn(bnd, npc=None):
     npc : int or None, optional
       number of PCs to calculate, defaults to None
     '''
-    data = format_for_fa(bnd)
-    pca_obj = PCA(n_comp=npc)
+    data = format_for_fa(bnd, preaverage=preaverage)
+    pca_obj = PCA(n_components=npc)
     score = pca_obj.fit(data).transform(data)
     weight = pca_obj.components_
     #score = np.dot(data - stats.nanmean(data), weight)

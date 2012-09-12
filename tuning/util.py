@@ -1,5 +1,5 @@
 import numpy as np
-from multiregress import multiregress
+# from multiregress import multiregress
 import scipy.stats as stats
 from scipy.stats.distributions import norm
 
@@ -48,84 +48,84 @@ def unbiased_histogram(spikes, bins=None, range=None, new=None):
         hist[i] /= time_interval
     return hist, bin_times
 
-def calc_pd(rates, directions, \
-                with_err=False, n_samp=1000, \
-                with_baseline=False):
-    '''
-    Calculates preferred directions of a unit from a center out task
-    
-    could be a method of a "unit" class
-    which references the relevant data_file items
-
-    Calculates the vector components of the preferred direction:
-    c_x, c_y, and c_z from the
-    b_x, b_y, and b_z partial regression co-efficients described in eqn 1 of
-    Schwartz et al, 1988:
-
-    .. math:: d(M) = b + b_x.m_x + b_y.m_y + b_z.m_z,
-
-    and where
-
-    .. math::
-
-        c_x = b_x / sqrt(b_x^2 + b_y^2 + b_z^2)
-        
-        c_y = b_y / sqrt(b_x^2 + b_y^2 + b_z^2)
-        
-        c_z = b_z / sqrt(b_x^2 + b_y^2 + b_z^2)
-
-    The algorithm regresses the firing rates (spike count / duration) against
-    (1, cos theta_x, cos theta_y, cos theta_z), to give (b, b_x, b_y, b_z)
-
-    Parameters
-    ----------
-    rates : array, shape (ndir,)
-        1d array of firing rates in each of the (usually eight) directions
-    directions : array, shape (ndir, 3)
-        array of directions associated with each of the `rates`
-    with_err : bool, default False
-        whether to calculate and return std errors of pd components
-    n_samp : integer
-        when calculating error, is the number of samples from the
-        theoretical distribution of PD to calculate
-        
-    Returns
-    -------
-    pd  : array, shape (3,)
-      preferred direction, unit-length
-    k   : scalar
-      modulation depth :math:`(k = |b| = b / pd)`
-    err : array, shape (3, )
-        std errors of components of pds
-    '''
-    assert type(rates) == type(directions) == np.ndarray
-    assert np.rank(rates) == 1      # (n_dirs, rate)
-    assert np.rank(directions) == 2 # (ndirs, [x,y,z])
-    assert directions.shape[1] == 3 # 3d co-ordinates array
-    assert type(with_err) == bool
-    assert type(n_samp) == int
-
-    lengths = np.sqrt( (directions**2).sum(axis=1) )[..., None]
-    cosInput = directions / lengths
-    if not with_err:
-        n_directions = directions.shape[0]
-        xin = np.hstack((np.ones((n_directions, 1)), cosInput))
-        all_b = np.linalg.lstsq(xin, rates)[0]
-        b0, b = all_b[0], all_b[1:]
-        k = np.sqrt(np.sum(b**2))
-        # normalize to unit length
-        pd = b / k
-        if not with_baseline:
-            return pd, k
-        else:
-            return pd, k, b0
-    else:
-        b, b_s = multiregress(cosInput, rates) # partial regression coeffs
-        b = b[1:] # remove constant term for consideration of direction
-        k = np.sqrt(np.sum(b**2))
-        pd = b / k
-        # b.shape (3,)
-        return pd, b_s, k
+#~ def calc_pd(rates, directions, \
+                #~ with_err=False, n_samp=1000, \
+                #~ with_baseline=False):
+    #~ '''
+    #~ Calculates preferred directions of a unit from a center out task
+    #~ 
+    #~ could be a method of a "unit" class
+    #~ which references the relevant data_file items
+#~ 
+    #~ Calculates the vector components of the preferred direction:
+    #~ c_x, c_y, and c_z from the
+    #~ b_x, b_y, and b_z partial regression co-efficients described in eqn 1 of
+    #~ Schwartz et al, 1988:
+#~ 
+    #~ .. math:: d(M) = b + b_x.m_x + b_y.m_y + b_z.m_z,
+#~ 
+    #~ and where
+#~ 
+    #~ .. math::
+#~ 
+        #~ c_x = b_x / sqrt(b_x^2 + b_y^2 + b_z^2)
+        #~ 
+        #~ c_y = b_y / sqrt(b_x^2 + b_y^2 + b_z^2)
+        #~ 
+        #~ c_z = b_z / sqrt(b_x^2 + b_y^2 + b_z^2)
+#~ 
+    #~ The algorithm regresses the firing rates (spike count / duration) against
+    #~ (1, cos theta_x, cos theta_y, cos theta_z), to give (b, b_x, b_y, b_z)
+#~ 
+    #~ Parameters
+    #~ ----------
+    #~ rates : array, shape (ndir,)
+        #~ 1d array of firing rates in each of the (usually eight) directions
+    #~ directions : array, shape (ndir, 3)
+        #~ array of directions associated with each of the `rates`
+    #~ with_err : bool, default False
+        #~ whether to calculate and return std errors of pd components
+    #~ n_samp : integer
+        #~ when calculating error, is the number of samples from the
+        #~ theoretical distribution of PD to calculate
+        #~ 
+    #~ Returns
+    #~ -------
+    #~ pd  : array, shape (3,)
+      #~ preferred direction, unit-length
+    #~ k   : scalar
+      #~ modulation depth :math:`(k = |b| = b / pd)`
+    #~ err : array, shape (3, )
+        #~ std errors of components of pds
+    #~ '''
+    #~ assert type(rates) == type(directions) == np.ndarray
+    #~ assert np.rank(rates) == 1      # (n_dirs, rate)
+    #~ assert np.rank(directions) == 2 # (ndirs, [x,y,z])
+    #~ assert directions.shape[1] == 3 # 3d co-ordinates array
+    #~ assert type(with_err) == bool
+    #~ assert type(n_samp) == int
+#~ 
+    #~ lengths = np.sqrt( (directions**2).sum(axis=1) )[..., None]
+    #~ cosInput = directions / lengths
+    #~ if not with_err:
+        #~ n_directions = directions.shape[0]
+        #~ xin = np.hstack((np.ones((n_directions, 1)), cosInput))
+        #~ all_b = np.linalg.lstsq(xin, rates)[0]
+        #~ b0, b = all_b[0], all_b[1:]
+        #~ k = np.sqrt(np.sum(b**2))
+        #~ # normalize to unit length
+        #~ pd = b / k
+        #~ if not with_baseline:
+            #~ return pd, k
+        #~ else:
+            #~ return pd, k, b0
+    #~ else:
+        #~ b, b_s = multiregress(cosInput, rates) # partial regression coeffs
+        #~ b = b[1:] # remove constant term for consideration of direction
+        #~ k = np.sqrt(np.sum(b**2))
+        #~ pd = b / k
+        #~ # b.shape (3,)
+        #~ return pd, b_s, k
 
 def calc_pp(rates, positions):
     '''Calculates positional gradient for a cell, based on the nine firing

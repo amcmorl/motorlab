@@ -279,3 +279,15 @@ def max_neighbour_deviation(pds):
     angs = np.arccos(dot[neighbours][:-1])
     res = np.nanmax(angs)
     return res
+
+def test_mean_deviation():
+    # test simple case - all valid angles
+    B = np.array([[ 0.26097211, -1.76208686,  0.46576422],
+                  [-1.67251254,  1.0682131, -0.12919601],
+                  [-0.17027653,  0.66272588, -0.59754741]])
+    pd = unitvec(B, axis=1)
+    angles = np.zeros((B.shape[0],))
+    angles[0] = np.arccos(np.dot(pd[0], pd[1]))
+    angles[1] = np.arccos(np.dot(pd[0], pd[2]))
+    angles[2] = np.arccos(np.dot(pd[1], pd[2]))
+    np.testing.assert_almost_equal(np.mean(angles), mean_deviation(pd))

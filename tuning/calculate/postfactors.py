@@ -15,7 +15,7 @@ from motorlab.tuning import fit
 from motorlab.tuning.calculate import factors
 
 # plotting stuff
-from spherical_stats import Lambertograph, generate_cone_circle
+from vecgeom.plot import generate_cone_circle
 import split_lambert_projection
 from motorlab.tuning.display import orange_plots
 from mayavi import mlab
@@ -93,7 +93,7 @@ def plot_angles(pds, save_dir='', position=0):
     
     # plot vectors
     ori = np.zeros_like(pds)
-    fig = mlab.figure(size=(2048,2048))
+    fig = mlab.figure(size=(2048,2048), bgcolor=(1,1,1))
     fig.scene.disable_render = True
 
     # draw arrows for actual vectors
@@ -201,34 +201,34 @@ def plot_tuning_trajectories(pd, ca, dsname='', npc=4):
         figs.append( plot_tuning_trajectory(pd[i], ca[i]) )
     return figs
     
-def old_plot_tuning_trajectories(pd, theta, save_dir='', npc=4):
-    '''
-    Parameters
-    ----------
-    pd : ndarray
-      shape (nscore, nbin - 1, 3)
-    theta : ndarray
-      shape (nscore, nbin)
-    '''
-    tp = cart2pol(pd)
-    nbin = pd.shape[1]
-    figs = []
-    #i = 0
-    for i in xrange(npc):
-    #if True:
-        fig = plt.figure(figsize=(10,5))
-        lg = Lambertograph(n_items=pd.shape[0], fig=fig)
-        for j in xrange(nbin):
-            lg.plot_circle(tp[i,j,0], tp[i,j,1], theta[i,j], color='#808080')
-        lg.plot_polar2(tp[i,:,0], tp[i,:,1])
-
-        if save_dir != '':
-            print "Saving"
-            out_name = get_out_name(save_dir, 'pd_trajectory_pc%d' % (i+1),
-                                    ext='pdf')
-            fig.savefig(out_name, dpi=600)
-        figs.append(fig)
-    return figs
+#~ def old_plot_tuning_trajectories(pd, theta, save_dir='', npc=4):
+    #~ '''
+    #~ Parameters
+    #~ ----------
+    #~ pd : ndarray
+      #~ shape (nscore, nbin - 1, 3)
+    #~ theta : ndarray
+      #~ shape (nscore, nbin)
+    #~ '''
+    #~ tp = cart2pol(pd)
+    #~ nbin = pd.shape[1]
+    #~ figs = []
+    #~ #i = 0
+    #~ for i in xrange(npc):
+    #~ #if True:
+        #~ fig = plt.figure(figsize=(10,5))
+        #~ lg = Lambertograph(n_items=pd.shape[0], fig=fig)
+        #~ for j in xrange(nbin):
+            #~ lg.plot_circle(tp[i,j,0], tp[i,j,1], theta[i,j], color='#808080')
+        #~ lg.plot_polar2(tp[i,:,0], tp[i,:,1])
+#~ 
+        #~ if save_dir != '':
+            #~ print "Saving"
+            #~ out_name = get_out_name(save_dir, 'pd_trajectory_pc%d' % (i+1),
+                                    #~ ext='pdf')
+            #~ fig.savefig(out_name, dpi=600)
+        #~ figs.append(fig)
+    #~ return figs
         
 def plot_scores(score, ntask, nscore=8, save_dir=''):
     score_folded = factors.format_from_fa(score, ntask)

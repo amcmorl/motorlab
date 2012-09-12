@@ -1,6 +1,6 @@
-r_dir = '/home/amcmorl/files/pitt/tuning/code/r/'
-source(paste(r_dir, 'common_functions.R', sep=""))
-source(paste(r_dir, 'get_PD.R', sep=""))
+r_dir = '/home/amcmorl/lib/python/motorlab/tuning/r'
+source(paste(r_dir, 'common_functions.R', sep="/"))
+source(paste(r_dir, 'get_PD.R', sep="/"))
 
 fit_gam = function (data.train, data.test, model, predict) {
 

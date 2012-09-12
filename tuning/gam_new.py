@@ -1,6 +1,7 @@
 import numpy as np
 import rpy2.robjects as ro
 import rpy2.robjects.numpy2ri
+rpy2.robjects.numpy2ri.activate()
 from amcmorl_py_tools.proc_tools import edge2cen
 from warnings import warn
 from amcmorl_py_tools.vecgeom import unitvec
@@ -11,7 +12,7 @@ import motorlab.kinematics as kin
 from scikits.learn.cross_val import KFold
 
 ro.r('require(mgcv)')
-rdir = '/home/amcmorl/files/pitt/tuning/code/r'
+rdir = '/home/amcmorl/lib/python/motorlab/tuning/r'
 ro.r('source("%s/fit_gam.R")' % rdir)
 rgam = ro.r('fit_gam')
 
@@ -342,6 +343,13 @@ def gam_predict_cv(bnd, models, metadata, nfold=10):
         # format training data to:
         # y, t, dx, dy, dz, px, py, pz, vx, vy, vz, sp
         # and all the same length
+        
+        #_ = count[perm][train].shape
+        #print "in cv, count train: %d x %d " % (_[0], _[1])
+        #_ = count[perm][test].shape
+        #print "in cv, count test: %d x %d " % (_[0], _[1])
+        print "mean count: %0.3f" % (np.mean(count[perm][train]))
+        
         data_train = _format_for_gam(count[perm][train], 
                                      time[perm][train],
                                      pos[perm][train])
@@ -393,7 +401,8 @@ def get_average_smooth(smooth):
     xyz = np.zeros(avg_shape)
     std = np.zeros(avg_shape)
     for i, pt in enumerate(t):
-        pts = near(t, pt)
+        #pts = near(t, pt)
+        pts = np.isclose(t, pt)
         xyz[i] = np.mean(xyzall[pts], axis=0)
         std[i] = np.std(xyzall[pts], axis=0)
     return t, xyz, std
