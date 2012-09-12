@@ -1,9 +1,9 @@
 import os
 import time
 import motorlab.tuning
-import motorlab.network
+#import motorlab.network
 
-project_dirs = {'network' : motorlab.network.proj_dir,
+project_dirs = {#'network' : motorlab.network.proj_dir,
                 'tuning' : motorlab.tuning.proj_dir}
 
 def make_today_dir(project='tuning'):

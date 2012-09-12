@@ -7,7 +7,7 @@ class BinnedData:
 
     Attributes
     ----------
-    PSTHs : ndarray or None
+    count : ndarray or None
       binned spike counts, sorted by task and repeats
       shape (ntask, nrep, nunit, nbin)
     bin_edges : ndarray
