@@ -1,12 +1,12 @@
 import numpy as np
 import rpy2.robjects as ro
 import rpy2.robjects.numpy2ri
-from proc_tools import edge2cen
+from amcmorl_py_tools.proc_tools import edge2cen
 from warnings import warn
-from vectors import unitvec
+from amcmorl_py_tools.vecgeom import unitvec
 #from scipy import stats
 
-import motorlab.tuning.calculate.kinematics as kin
+import motorlab.kinematics as kin
 
 from scikits.learn.cross_val import KFold
 
