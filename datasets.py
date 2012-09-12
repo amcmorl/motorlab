@@ -5,7 +5,7 @@ from ConfigParser import ConfigParser
 from git import Repo
 from warnings import warn
 from glob import glob
-from motorlab.data_files import list_units
+from motorlab.vr.data_files import list_units
 
 # datasets
 # osmd = offline sorted multiday

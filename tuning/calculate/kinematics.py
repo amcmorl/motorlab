@@ -1,6 +1,9 @@
 import numpy as np
-import amcmorl_py_tools.proc_tools
-from amcmorl_py_tools.vecgeom import norm, unitvec
+import proc_tools
+from vectors import norm, unitvec
+
+from warnings import warn
+warn("This module is deprecated. Use 'motorlab.kinematics' instead"")
 
 def get_vel(pos, time, tax=0, spax=-1):
     ''' Get instantaneous velocity

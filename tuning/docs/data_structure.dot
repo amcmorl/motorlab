@@ -1,0 +1,24 @@
+digraph data_structures {
+    a [label="Cell class", shape="rectangle"]
+	unit_name [shape="oval"]
+	node [shape="house"]
+	a->unit_name
+	files [shape="house"]
+	a->files
+    a->HoldAStart
+	a->HoldAFinish
+	a->HoldBStart
+	a->HoldBFinish
+	a->align_starts
+	a->align_stops
+	a->StartPos
+	a->TargetPos
+	a->tasks
+	a->spikes
+	a->kinematics
+
+	b [label="File class", shape=box]
+	a->b
+	b->a
+
+}

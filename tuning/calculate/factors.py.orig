@@ -1,0 +1,149 @@
+import numpy as np
+from scipy import stats
+import mdp
+from scikits.learn.pca import PCA
+from scikits.learn.fastica import FastICA
+from numpy.testing import assert_array_almost_equal
+
+# py-to-r stuff
+import rpy2.robjects as ro
+import rpy2.robjects.numpy2ri
+_varimax = ro.r('varimax')
+
+def varimax(weight):
+    '''
+    Perform varimax rotation of weights matrix.
+
+    Uses r varimax call. Varimax rotates weights matrix to consolidate
+    weight into fewest possible units for each score.
+    
+    Parameters
+    ----------
+    weight : ndarray
+      unrotated weight matrix, shape = (npc, nvar)
+    
+    Returns
+    -------
+    rot_weight : ndarray
+      rotated weight matrix
+    rot_mat : ndarray
+      rotation matrix
+    '''
+    out = _varimax(weight)
+    rot_weight, rot_mat = [np.array(x) for x in out]
+    return rot_weight, rot_mat
+
+def format_for_fa(bnd):
+    '''
+    Parameters
+    ----------
+    bnd : BinnedData
+      binned data
+    '''
+    # average across repeats
+    data = stats.nanmean(bnd.count, axis=1)
+
+    ntask, nunit, nbin = data.shape
+    data = np.transpose(data, [1, 0, 2])
+    # gives nunit, ntask, nbin
+    data = np.reshape(data, [nunit, ntask * nbin])
+    # gives nunit, ntask * nbin = dimensions, observations
+
+    # mdp and scikits.learn.pca take data in form (observations, dimensions)
+    return data.T
+
+def format_from_fa(score, ntask):
+    '''
+    score : ndarray
+      scores from factor analysis,
+      in unfolded form, i.e. (nscore, nbin * ntask)
+    '''
+    return np.reshape(score, (score.shape[0], ntask, -1))
+
+def calc_pcs_learn(bnd, npc=None):
+    '''
+    Parameters
+    ----------
+    bnd : BinnedData
+      binned data
+    npc : int or None, optional
+      number of PCs to calculate, defaults to None
+    '''
+    data = format_for_fa(bnd)
+    pca_obj = PCA(n_comp=npc)
+    score = pca_obj.fit(data).transform(data)
+    weight = pca_obj.components_
+    #score = np.dot(data - stats.nanmean(data), weight)
+    return score.T, weight.T
+
+def calc_ics_learn(bnd, npc=None):
+    '''
+    Parameters
+    ----------
+    bnd : BinnedData
+      binned data
+    npc : int or None, optional
+      number of PCs to calculate, defaults to None
+    '''
+    data = format_for_fa(bnd)
+    ica_obj = FastICA(n_comp=npc)
+    source = ica_obj.fit(data).transform(data)
+    weight = ica_obj.get_mixing_matrix()
+    return source.T, weight.T
+
+def calc_pcs_mdp(bnd, npc=None):
+    '''
+    Parameters
+    ----------
+    bnd : BinnedData
+      binned data
+    npc : int or None, optional
+      number of PCs to calculate, defaults to None
+    '''
+    data = format_for_fa(bnd)
+    pca_node = mdp.nodes.PCANode(output_dim=npc)
+    score = pca_node.execute(data)
+    weight = pca_node.get_projmatrix()
+    return score.T, weight.T
+
+def calc_ics_mdp(bnd):
+    '''
+    Parameters
+    ----------
+    bnd : BinnedData
+      binned data
+    '''
+    data = format_for_fa(bnd)
+    ica_node = mdp.nodes.FastICANode()
+    score = ica_node.execute(data)
+    weight = ica_node.filters.T
+    return score.T, weight.T
+    
+def calc_fa(bnd):
+    '''
+    Parameters
+    ----------
+    bnd : BinnedData
+      binned data
+      
+    Notes
+    -----
+    uses mdp
+    '''
+    data = format_for_fa(bnd)
+    fa_node = mdp.nodes.FANode()
+    score = fa_node.execute(data)
+    return score.T
+<<<<<<< HEAD
+
+=======
+    
+>>>>>>> 9e219f47e2ad0dac7e60417700a71853c27b024e
+def _check_pca(data, weight, score):
+    norm_data = data - stats.nanmean(data)
+    assert_array_almost_equal(np.dot(norm_data, weight), score)
+
+def project(data, weight):
+    norm_data = data - stats.nanmean(data)
+    score = np.dot(norm_data, weight.T)
+    return score.T
