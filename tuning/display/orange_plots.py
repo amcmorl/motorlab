@@ -1,5 +1,5 @@
 import numpy as np
-import plot_tools
+from amcmorl_py_tools import plot_tools
 import matplotlib.pyplot as plt
 
 tdelta = 0.005

@@ -283,6 +283,11 @@ def compile_units_list(units_file):
     return units_list
 
 def convert_to_long_unit_name(short_unit_name, M1=True):
+    '''
+    Convert unit names in the form "37B" to the form "Unit%%%_%"
+    
+    If M1 == True, add 100 to the unit number.
+    '''
     if M1: M1 = 100
     else: M1 = 0
     chan_num = M1 + int(short_unit_name[:-1])

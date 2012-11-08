@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 from scipy import stats
-import amcmorl_py_tools.spherical_stats as ss
+import amcmorl_py_tools.vecgeom.stats as ss
 from amcmorl_py_tools.vecgeom import unitvec, norm
 from warnings import warn
 from motorlab.tuning import fit

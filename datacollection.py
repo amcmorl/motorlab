@@ -4,9 +4,9 @@ from motorlab.data_files import CenOut_VR_RTMA_10_File, \
 import motorlab.tuning.util as tc_util
 from warnings import warn
 from scipy.interpolate import splprep, splev
-from vectors import norm, unitvec
+from amcmorl_py_tools.vecgeom import norm, unitvec
 from motorlab.binned_data import BinnedData
-import motorlab.tuning.calculate.kinematics as kin
+import motorlab.kinematics as kin
 
 '''
 want to have something that:
@@ -621,26 +621,26 @@ class DataCollection:
                     do_rate=False):
         '''Constructs aligned PSTHs of spikes in each direction.
 
-	Histograms are constructed with `n_bins`, aligned at increasing
-	and decreasing 15% speed points, windowed to include maximum
-	common period back to latest HoldAStart and up to earliest
-	HoldBFinish.
+    Histograms are constructed with `n_bins`, aligned at increasing
+    and decreasing 15% speed points, windowed to include maximum
+    common period back to latest HoldAStart and up to earliest
+    HoldBFinish.
 
-	Parameters
-	----------
-	n_bins : int, default=100
-	    number of bins
+    Parameters
+    ----------
+    n_bins : int, default=100
+        number of bins
           align : string
             one of 'speed', 'hold', '3:2:3'
         verbose : bool
             print information messages?
 
         Returns
-	-------
+    -------
         binned : BinnedData instance
           bd.PSTHs.shape = (n_tasks, n_reps, n_dsets, nbins)
           bd.pos.shape = (n_tasks, n_reps, nbins + 1, 3)
-	'''
+    '''
         #assert len(self.units) > 0
         assert type(nbin) == int
         assert align in align_types

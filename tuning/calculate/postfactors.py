@@ -3,20 +3,21 @@ import matplotlib.pyplot as plt
 from scipy import stats
 
 # generic calc stuff
-import vectors
-from spherical import cart2pol
-import plot_tools
-from vectors import unitvec
+from amcmorl_py_tools.vecgeom.rotations import rotate_by_angles
+from amcmorl_py_tools.vecgeom.measure import angle_between
+from amcmorl_py_tools.spherical import cart2pol
+from amcmorl_py_tools import plot_tools
+from amcmorl_py_tools.vecgeom import unitvec
 
 # motorlab.tuning stuff
 from motorlab.out_files import get_out_name
-from motorlab.tuning.calculate.pds import bootstrap_pd_stats, calc_all_pd_uncerts
+from motorlab.tuning.calculate.pds import bootstrap_pd_stats
+ # , calc_all_pd_uncerts
 from motorlab.tuning import fit
 from motorlab.tuning.calculate import factors
 
 # plotting stuff
-from vecgeom.plot import generate_cone_circle
-import split_lambert_projection
+from amcmorl_py_tools.vecgeom.plot import generate_cone_circle
 from motorlab.tuning.display import orange_plots
 from mayavi import mlab
 
@@ -83,13 +84,12 @@ def plot_angles(pds, save_dir='', position=0):
     # let pds be A, B, C
     # 1) rotate C to z axis
     tpa = cart2pol(pds[2])
-    pds_r0 = vectors.rotate_by_angles(pds.T, tpa[0], tpa[1], \
-                                        reverse_order=True).T
+    pds_r0 = rotate_by_angles(pds.T, tpa[0], tpa[1], reverse_order=True).T
     # 2) rotate B to lie in x-z plane
     # calculate angle between B[0:2] and x
     # rotate B to lie on y=0 plane
-    phi = vectors.angle_between(pds_r0[1,0:2], np.array([1,0]))
-    pds_r1 = vectors.rotate_by_angles(pds_r0.T, 0, phi).T
+    phi = angle_between(pds_r0[1,0:2], np.array([1,0]))
+    pds_r1 = rotate_by_angles(pds_r0.T, 0, phi).T
     
     # plot vectors
     ori = np.zeros_like(pds)

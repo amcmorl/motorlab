@@ -10,6 +10,47 @@ import rpy2.robjects as ro
 import rpy2.robjects.numpy2ri
 _varimax = ro.r('varimax')
 
+def get_reduced_neurons(score, which_scores, weight, bnd, preaveraged=False):
+    '''
+    Project firing activity (in `bnd`) on to a space of reduced factors, 
+    given by `which_scores` of `scores`.
+    
+    Parameters
+    ----------
+    score : ndarray
+      (npc, nobs) array of factors identified by factors.calc_pcs_mdp
+    which_scores : ndarray
+      indices of scores to keep
+    weight : ndarray
+      (npc, nvar) array of eigenvector values
+    bnd : BinnedData
+      contains neural data to project (uses rates)
+    preaveraged : bool
+      dictates how to reformat data
+    
+    Returns
+    -------
+    rates : ndarray
+    '''
+    assert score.shape[0] == weight.shape[0] # npc
+    
+    # select subset of scores
+    reduced_score = score[which_scores]
+    reduced_weight = weight[which_scores]
+
+    # this sxn needs to get from
+    #     (ntask, nrep, nunit, nbin) to (nunit, ntask * nbin)
+    data = format_for_fa(bnd, preaverage=preaveraged).T
+    
+    # project_scores_to_var_space expects no repeats (i.e. preaveraged)
+    # uses `data` to get mean values
+    reduced_neurons_flat = project_scores_to_var_space( \
+        reduced_score, reduced_weight, data)
+                                                       
+    # returns data in shape (nscore|nunit, ntask, nrep, nbin)
+    return format_from_fa(reduced_neurons_flat, bnd, \
+        preaveraged=preaveraged)
+
 def varimax(weight):
     '''
     Perform varimax rotation of weights matrix.
@@ -64,6 +105,8 @@ def format_for_fa(bnd, preaverage=False, use_unbiased=False):
 
 def format_from_fa(score, bnd, preaveraged=False):
     '''
+    Parameters
+    ----------
     score : ndarray
       scores from factor analysis,
       in unfolded form, i.e. (nscore, ntask * nrep * nbin)
@@ -71,6 +114,12 @@ def format_from_fa(score, bnd, preaveraged=False):
       original data, so that shape and nans can be taken into account
     preaveraged : bool
       did we preaverage repeats before calculating scores
+      
+    Returns
+    -------
+    data : ndarray
+      formatted into shape (nscore, ntask, [nrep,] nbin)
+      where presence of nrep depends on `preaveraged`
     '''
     ntask, nrep, nunit, nbin = bnd.count.shape    
     nscore = score.shape[0]
@@ -93,6 +142,38 @@ def format_from_fa(score, bnd, preaveraged=False):
         reshaped = np.reshape(formatted, (nscore, ntask, nrep, nbin))
     return reshaped
 
+def calc_pca(bnd, npc=None, preaverage=False, use_unbiased=False, \
+    method='mdp'):
+    '''
+    Parameters
+    ----------
+    bnd : BinnedData
+      binned data
+    npc : int or None, optional
+      number of PCs to calculate, defaults to None
+    preaverage : bool
+      average across repeats?
+      
+    Returns
+    -------
+    score : ndarray
+      (npc, nobs)
+    weight : ndarray
+      (npc, nvar)
+    '''
+    assert method in ['mdp', 'skl']
+    data = format_for_fa(bnd, preaverage=preaverage,
+                         use_unbiased=use_unbiased)
+    if method == 'mdp':    
+        pca_node = mdp.nodes.PCANode(output_dim=npc)
+        score = pca_node.execute(data)
+        weight = pca_node.get_projmatrix()
+    elif method == 'skl':
+        pca_obj = PCA(n_components=npc)
+        score = pca_obj.fit(data).transform(data)
+        weight = pca_obj.components_.T
+    return score.T, weight.T
+
 def calc_pcs_mdp(bnd, npc=None, preaverage=False, use_unbiased=False):
     '''
     Parameters
@@ -104,13 +185,23 @@ def calc_pcs_mdp(bnd, npc=None, preaverage=False, use_unbiased=False):
     preaverage : bool
       average across repeats?
     '''
-    data = format_for_fa(bnd, preaverage=preaverage,
-                         use_unbiased=use_unbiased)
-    pca_node = mdp.nodes.PCANode(output_dim=npc)
-    score = pca_node.execute(data)
-    weight = pca_node.get_projmatrix()
-    return score.T, weight.T
+    print "calc_pcs_mdp deprecated! Use calc_pca instead."
+    return calc_pca(bnd, npc=npc, preaverage=preaverage, 
+        use_unbiased=use_unbiased, method='mdp')
     
+def calc_pcs_learn(bnd, npc=None, preaverage=False, use_unbiased=False):
+    '''
+    Parameters
+    ----------
+    bnd : BinnedData
+      binned data
+    npc : int or None, optional
+      number of PCs to calculate, defaults to None
+    '''
+    print "calc_pcs_learn deprecated! Use calc_pca instead."
+    return calc_pca(bnd, npc=npc, preaverage=preaverage,
+        use_unbiased=use_unbiased, method='skl')
+
 def calc_pcs_variance_explained_mdp(bnd, preaverage=False, 
                                    use_unbiased=False):
     '''
@@ -138,27 +229,57 @@ def _check_pca(data, weight, score):
     assert_array_almost_equal(np.dot(norm_data, weight), score)
 
 def project(data, weight):
-    norm_data = data - stats.nanmean(data)
-    score = np.dot(norm_data, weight.T)
-    return score.T    
-    
-# scikits.learn ###############################################################
-
-def calc_pcs_learn(bnd, npc=None, preaverage=False):
     '''
     Parameters
     ----------
-    bnd : BinnedData
-      binned data
-    npc : int or None, optional
-      number of PCs to calculate, defaults to None
+    data : ndarray
+      shape (nobs, nvar)
+    weight : ndarray
+      shape (npc, nvar)
+      
+    Returns
+    -------
+    score : ndarray
+      shape (npc, nobs)
     '''
-    data = format_for_fa(bnd, preaverage=preaverage)
-    pca_obj = PCA(n_components=npc)
-    score = pca_obj.fit(data).transform(data)
-    weight = pca_obj.components_
-    #score = np.dot(data - stats.nanmean(data), weight)
-    return score.T, weight.T
+    assert np.rank(data) == np.rank(weight) == 2
+    assert data.shape[1] == weight.shape[1]
+    
+    # average across observations, 0th dimension
+    norm_data = data - stats.nanmean(data)
+    
+    # (nobs, nvar) x (nvar, npc) -> (nobs, npc)
+    score = np.dot(norm_data, weight.T)
+    return score.T  # -> (npc, nobs)  
+    
+def project_scores_to_var_space(score, weight, data):
+    '''
+    Project reduced scores, via reduced weights, up to neuron space    
+    
+    Parameters
+    ----------
+    score : ndarray
+      shape (npc, nobs), i.e. (nscore, ntask [* nrep] * nbin)
+    weight : ndarray
+      shape (npc, nvar), i.e. (nscore, nunit)
+    data : ndarray
+      shape (nvar, nobs), data from which to get mean
+      
+    Returns
+    -------
+    projected : ndarray
+      shape (nvar, nobs), i.e. (nunit, ntask * nbin)
+    '''
+    assert np.rank(score) == np.rank(weight) == np.rank(data) == 2
+    assert score.shape[0] == weight.shape[0] # npc
+    assert score.shape[1] == data.shape[1]   # nobs
+    assert weight.shape[1] == data.shape[0]  # nvar
+    
+    # take average over observations
+    mean = stats.nanmean(data, axis=1)
+    return (np.dot(weight.T, score) + mean[:,None])
+    
+# scikits.learn ###############################################################
 
 def calc_ics_learn(bnd, npc=None):
     '''

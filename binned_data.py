@@ -1,5 +1,6 @@
 import numpy as np
 from warnings import warn
+from copy import deepcopy
 
 class BinnedData:
     '''
@@ -498,6 +499,12 @@ class BinnedData:
         return BinnedData(self.bin_edges, self.pos, self.tasks,
                           new_unames, self.align, count=new_count,
                           lags=new_lags, files=self.files)
+                          
+    def copy(self):
+        '''
+        Make a copy of myself and return it.
+        '''
+        return deepcopy(self)
 
 def load_binned_data(file):
     '''
@@ -529,3 +536,58 @@ def load_binned_data(file):
 
 def has(obj, item):
     return item in obj.__dict__.keys()
+    
+def _estimate_count_from_rate(rate, bin_edges):
+    '''
+    Convert a `rate` (in Hz) to a count, given window edges `bin_edges`.
+    '''
+    assert rate.shape[-1] == bin_edges.shape[-1] -1
+    
+    window = np.diff(bin_edges, axis=-1)
+    
+    if np.rank(rate) == np.rank(bin_edges) + 1:
+        # add dimension at -2 if there is one more dim in rate
+        window = window[...,None,:]
+    return rate * window
+
+def _make_count_from_rate(rate, bin_edges):
+    '''
+    Make array of count values (ints (but stored in float arr)) from Poisson rvs with mean given by rate.
+
+    Need to take into account window size.
+
+    rate : ndarray
+      shape is same as count will have
+    '''
+    assert rate.shape[-1] == bin_edges.shape[-1] -1
+    
+    est_count = _estimate_count_from_rate(rate, bin_edges)
+
+    count = np.zeros_like(est_count)
+
+    # False for nans and negatives
+    nonneg = est_count >= 0
+    count[nonneg] = np.random.poisson(est_count[nonneg])
+
+    # also need to keep track of original nans
+    isnan = np.isnan(est_count)
+    count[isnan] = np.nan
+    
+    return count
+
+def make_bnd_with_count_from_rate(rate, bnd):
+    '''
+    Make a copy of `bnd` with the count taken as a Poisson RVS based on `rate`.
+
+    Parameters
+    ----------
+    rate : ndarray
+      shape = bnd.count.shape
+    bnd : BinnedData
+      binned data to base return value off
+    '''
+    assert rate.shape == bnd.count.shape
+    count = _make_count_from_rate(rate, bnd.bin_edges)
+    bndc = bnd.copy()
+    bndc.set_count(count)
+    return bndc

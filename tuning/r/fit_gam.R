@@ -2,7 +2,7 @@ r_dir = '/home/amcmorl/lib/python/motorlab/tuning/r'
 source(paste(r_dir, 'common_functions.R', sep="/"))
 source(paste(r_dir, 'get_PD.R', sep="/"))
 
-fit_gam = function (data.train, data.test, model, predict) {
+fit_gam = function (data.train, data.test, model, predict, family) {
 
   cn = c("y", "t",
     "dx", "dy", "dz",
@@ -69,8 +69,12 @@ fit_gam = function (data.train, data.test, model, predict) {
     print("Model not known")
     return()
   }
-    
-  out = gam(formula, data=frame.train, family='poisson')
+
+  # default to poisson if left blank
+  if (family == "") {
+    family = "poisson"
+  }
+  out = gam(formula, data=frame.train, family=family)
 
   coef = out$coefficients
   coefname = names(out$coefficients)

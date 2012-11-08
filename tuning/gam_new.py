@@ -4,12 +4,11 @@ import rpy2.robjects.numpy2ri
 rpy2.robjects.numpy2ri.activate()
 from amcmorl_py_tools.proc_tools import edge2cen
 from warnings import warn
-from amcmorl_py_tools.vecgeom import unitvec
-#from scipy import stats
+#from amcmorl_py_tools.vecgeom import unitvec
+from scipy import stats
+from scikits.learn.cross_val import KFold
 
 import motorlab.kinematics as kin
-
-from scikits.learn.cross_val import KFold
 
 ro.r('require(mgcv)')
 rdir = '/home/amcmorl/lib/python/motorlab/tuning/r'
@@ -286,18 +285,20 @@ def fold_repeats(out, bnd):
     out.pred = pred_folded
     out.actual = bnd.count
     
-def gam_predict_cv(bnd, models, metadata, nfold=10):
+def gam_predict_cv(bnd, models, metadata, nfold=10, family='poisson'):
     '''
     Parameters
     ----------
-    count : ndarray
-      spike counts, shape (ntrial, nbin)
-    time : ndarray
-      times of edges of bins, shape (ntrial, nbin + 1)
-    pos : ndarray
-      positions at `time`, shape (ntrial, nbin + 1, 3)
+    bnd : BinnedData
+      class containing counts and pos to fit
     models : list of string
       models to do gam
+    metadata : list
+      [dsname, unit, lag, align]
+    nfold : int
+      number of CV folds to perform
+    family : string
+      'poisson' or 'gaussian', noise model to assume when fitting
       
     Notes
     -----
@@ -368,7 +369,7 @@ def gam_predict_cv(bnd, models, metadata, nfold=10):
         for model in models:
             print "Processing %s" % (model)
             # do gam, get prediction
-            rout = rgam(data_train, data_test, model, True)
+            rout = rgam(data_train, data_test, model, True, family)
             gam_one = GAMOneModel(rout, data_train[:,1], count[test].shape)
             
             # put in container            
@@ -480,8 +481,8 @@ def unpack_coefficients(p, pname):
             lidx = np.flatnonzero(pname == last)[0]
             darr[i] = p[:, fidx:lidx + 1]
             
-            darr_av = np.mean(darr, axis=1)
-            darr_ = unitvec(darr_av, axis=0)
+            #darr_av = np.mean(darr, axis=1)
+            #darr_ = unitvec(darr_av, axis=0)
         
     if 'px' in pname:
         # get preferred position
@@ -495,3 +496,61 @@ def unpack_coefficients(p, pname):
         bdict['s'] = p[:, np.flatnonzero(pname == 'sp')].squeeze()
 
     return bdict
+
+# ----------------------------------------------------------------------------
+# comparison of predicted and actual counts / values
+# ----------------------------------------------------------------------------
+
+def compress_late_dims(arr):
+    '''
+    Flatten all but first dim of `arr`, i.e. shape (3,2,4) becomes (3,8).
+    '''
+    n = arr.shape[0]
+    return np.reshape(arr, [n, np.prod(arr.shape[1:])])
+
+def get_mean_sem_0th_dim(arr):
+    '''
+    Compress all dims > 0 to a single mean and SEM.
+    '''
+    arr_ = compress_late_dims(arr)
+    mean = stats.nanmean(arr_, axis=1)
+    N = np.sum(~np.isnan(arr_), axis=1)
+    sem = stats.nanstd(arr_, axis=1) / np.sqrt(N)
+    return mean, sem, N
+
+def calc_mean_loglik(gam_unit, family='poisson'):
+    '''
+    Calculate log likelihood loss function for Poisson or Gaussian
+    distributed data.
+
+    Log likelihood is defined as:
+
+    .. math:: L(Y, \theta(X)) = -2 \cdot \log \mathtext{Pr}_{\theta(X)}(Y)
+    
+    where :math:`\theta(X)` is the prediction and :math:`Y` is the actual data.
+    From Friedman, Tibshirani, and Hastie, 2nd ed, 5th print, eq. 7.8.
+    This is the probability of seeing the data, given the prediction.
+    
+    For Poisson, :math:`\mathtext{Pr}_{\theta(X)}(Y)` is given by 
+    :math:`pmf(Y,f(X))` and for gaussian, by :math:`pdf(Y, f(X))`
+    '''
+    assert family in ['poisson', 'gaussian']
+    
+    if family == 'poisson':
+        # only needs mean shape parameter
+        Pr = -2 * stats.poisson.logpmf(gam_unit.actual, gam_unit.pred)
+    else:
+        print "*"
+        # normal needs means and variance
+        # shape handling here calculates average across repeats,
+        # but keeps that dimension for broadcasting purposes
+        pred_mean = stats.nanmean(gam_unit.pred, axis=2)[:,:,None]
+        pred_std = stats.nanstd(gam_unit.pred, axis=2)[:,:,None]
+        
+        print pred_std.flatten()[0], pred_mean.flatten()[0]
+        
+        Pr = -2 * stats.norm.logpdf(gam_unit.actual, gam_unit.pred, pred_std)
+    
+    # Pr now has shape (nmod, ntask, nrep, nunit, nbin)
+    # get one number per model...
+    return get_mean_sem_0th_dim(Pr)
