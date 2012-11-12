@@ -1,8 +1,7 @@
 import numpy as np
 from scipy import stats
-import mdp
-from scikits.learn.decomposition.pca import PCA
-from scikits.learn.decomposition.fastica_ import FastICA
+from sklearn.decomposition.pca import PCA
+from sklearn.decomposition.fastica_ import FastICA
 from numpy.testing import assert_array_almost_equal
 
 # py-to-r stuff
@@ -10,7 +9,22 @@ import rpy2.robjects as ro
 import rpy2.robjects.numpy2ri
 _varimax = ro.r('varimax')
 
-def get_reduced_neurons(score, which_scores, weight, bnd, preaveraged=False):
+def _scale_reduced_arr(arr, which):
+    '''
+    Maintain sum along column (dim 1) despite reducing number of rows (dim 0).
+    
+    Parameters
+    ----------
+    arr   : ndarray, MxN
+    which : ndarray, M'
+    '''
+    reduced = arr[which]                # M'xN
+    full_scale = arr.sum(axis=None)        # N
+    reduced_scale = reduced.sum(axis=None) # N
+    return reduced * full_scale / reduced_scale
+
+def get_reduced_neurons(score, which_scores, weight, bnd, 
+    preaveraged=False, keep_scale=False):
     '''
     Project firing activity (in `bnd`) on to a space of reduced factors, 
     given by `which_scores` of `scores`.
@@ -27,6 +41,9 @@ def get_reduced_neurons(score, which_scores, weight, bnd, preaveraged=False):
       contains neural data to project (uses rates)
     preaveraged : bool
       dictates how to reformat data
+    keep_scale : bool
+      scale reduced score and reduced weight to maintain sum along reduced 
+      dimension
     
     Returns
     -------
@@ -35,8 +52,12 @@ def get_reduced_neurons(score, which_scores, weight, bnd, preaveraged=False):
     assert score.shape[0] == weight.shape[0] # npc
     
     # select subset of scores
-    reduced_score = score[which_scores]
-    reduced_weight = weight[which_scores]
+    if not keep_scale:
+        reduced_score = score[which_scores]
+        reduced_weight = weight[which_scores]
+    else:
+        reduced_score = _scale_reduced_arr(score, which_scores)
+        reduced_weight = _scale_reduced_arr(weight, which_scores)
 
     # this sxn needs to get from
     #     (ntask, nrep, nunit, nbin) to (nunit, ntask * nbin)

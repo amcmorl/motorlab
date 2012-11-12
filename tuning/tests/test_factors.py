@@ -1,5 +1,5 @@
 from motorlab.tuning.calculate.factors import \
-    project_scores_to_var_space, project
+    project_scores_to_var_space, project, _scale_reduced_arr
 import numpy as np
 from sklearn.decomposition.pca import PCA
 
@@ -31,4 +31,10 @@ def test_project_scores_to_var_space():
     out = project_scores_to_var_space(unav_score, weight, unaveraged)
     np.testing.assert_array_almost_equal(out, unaveraged)
     
-    
+def test_scale_reduced_arr():
+    a = np.array([[ 1.06013288,  3.72628987,  3.64479062,  3.77279705],
+                  [ 3.70796065,  6.71429556,  3.96241843,  1.62242115],
+                  [ 4.81396425,  2.39946127,  5.34491066, -0.83408738]])
+    wh = np.array([0,1])
+    a_ = _scale_reduced_arr(a, wh)
+    np.testing.assert_array_almost_equal(a.sum(axis=0), a_.sum(axis=0))

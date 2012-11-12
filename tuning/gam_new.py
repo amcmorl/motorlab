@@ -6,7 +6,7 @@ from amcmorl_py_tools.proc_tools import edge2cen
 from warnings import warn
 #from amcmorl_py_tools.vecgeom import unitvec
 from scipy import stats
-from scikits.learn.cross_val import KFold
+from sklearn.cross_validation import KFold
 
 import motorlab.kinematics as kin
 

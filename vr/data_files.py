@@ -250,6 +250,85 @@ class CenOut_3d_data_21_File(ExpFile):
             kins_list.append(kin)
         return kins_list
 
+############################### DRAWING FILES ###############################
+
+class Drawing_VR_RTMA_10_File(ExpFile):
+    '''
+    Handler class for VR RTMA 1.0 formatted data files.
+    
+    Parameters
+    ----------
+
+    Notes
+    -----
+    This is the current file version. This loader is currently only implemented
+    to read kinematics- needed to register kinematic dimensions to real
+    dimensions.
+    '''
+    def __init__(self, file_name):
+        version = 'VR_RTMA_1.0'
+        ExpFile.__init__(self, file_name, version)
+        self.load_data()
+        
+    def load_data(self):
+        '''Extracts data from VR_RTMA v1.0 data files
+        and converts kinematic data from optotrac to monkey co-ordinates
+
+        '''
+        file_dat = io.loadmat(self.file_name, squeeze_me=True,
+                              struct_as_record=False)
+        self.trials = file_dat['trials']
+        self.HoldAStart = self.trials.HoldAStart
+        self.HoldAFinish = self.trials.HoldAFinish
+        self.HoldBStart = self.trials.HoldBStart
+        self.HoldBFinish = self.trials.HoldBFinish
+        self.PlexonTrialTime = self.trials.PlexonTrialTime
+        
+        labels = np.asarray([''.join([chr(y) for y in x]).strip() \
+            for x in trials.Label])
+            
+        # masks
+        illusion_minus = trials.Illusion > 1.25 # assumes level of eccentricity
+        illusion_plus  = trials.Illusion < 0.75
+        illusion_none  = ~illusion_plus & ~illusion_minus
+        
+        self.kins = file_dat['kinematics']
+        #self.spikes = np.asarray(file_dat['spikes'])
+        self.spikes = file_dat['spikes']
+        fix_kin(self.kins, file_dat['header'].CursorTransform)
+
+    def get_kinematics(self):
+        """Returns an array containing all the trial's kinematic data.
+
+        Each entry in time has 4d - x,y,z,t
+        where t is relative to spike start.
+
+        Parameters
+        ----------
+        self : CenOut_VR_RTMA_10_File
+        
+        Returns
+        -------
+        kins_list : list of arrays, each with shape (n, 4)
+          which are x,y,z,t points for each position stored
+        """
+        kins = self.kins
+        trials = self.trials
+        kins_list = []
+        n_trials = trials.HoldAStart.size
+        start_time = trials.PlexonTrialTime + trials.HoldAStart
+        stop_time = trials.PlexonTrialTime + trials.HoldBFinish
+        for i in xrange(n_trials):
+            # windowed from HoldAStart to HoldBFinish - was from HoldAStart
+            valid_idxs = ((kins.PlexonTime > start_time[i]) & \
+                         (kins.PlexonTime < stop_time[i]))
+            valid_times = kins.PlexonTime[valid_idxs] \
+                - trials.PlexonTrialTime[i]
+            valid_positions = kins.Markers[valid_idxs]
+            valid_kins = np.hstack((valid_positions, valid_times[...,None]))
+            kins_list.append(valid_kins)
+        return kins_list
+
 ############################## UTILITY ROUTINES ##############################
 
 def get_unit_idx(unit, trial):
