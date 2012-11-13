@@ -277,24 +277,29 @@ class Drawing_VR_RTMA_10_File(ExpFile):
         '''
         file_dat = io.loadmat(self.file_name, squeeze_me=True,
                               struct_as_record=False)
-        self.trials = file_dat['trials']
-        self.HoldAStart = self.trials.HoldAStart
-        self.HoldAFinish = self.trials.HoldAFinish
-        self.HoldBStart = self.trials.HoldBStart
-        self.HoldBFinish = self.trials.HoldBFinish
+        self.trials          = file_dat['trials']
+        trials               = self.trials
+        self.HoldAStart      = self.trials.HoldAStart
+        self.HoldAFinish     = self.trials.HoldAFinish
+        self.HoldBStart      = self.trials.HoldBStart
+        self.HoldBFinish     = self.trials.HoldBFinish
         self.PlexonTrialTime = self.trials.PlexonTrialTime
         
         labels = np.asarray([''.join([chr(y) for y in x]).strip() \
-            for x in trials.Label])
+            for x in self.trials.Label])
             
         # masks
-        illusion_minus = trials.Illusion > 1.25 # assumes level of eccentricity
-        illusion_plus  = trials.Illusion < 0.75
-        illusion_none  = ~illusion_plus & ~illusion_minus
+        self.illusion_minus = trials.Illusion > 1.25 # assumes level of eccentricity
+        self.illusion_plus  = trials.Illusion < 0.75
+        self.illusion_none  = ~self.illusion_plus & ~self.illusion_minus
         
-        self.kins = file_dat['kinematics']
+        self.direction_ccw = np.asarray([x.split('_')[-1] == 'ccw' \
+            for x in labels])
+        self.direction_cw = ~self.direction_ccw
+        
+        self.kins    = file_dat['kinematics']
         #self.spikes = np.asarray(file_dat['spikes'])
-        self.spikes = file_dat['spikes']
+        self.spikes  = file_dat['spikes']
         fix_kin(self.kins, file_dat['header'].CursorTransform)
 
     def get_kinematics(self):
