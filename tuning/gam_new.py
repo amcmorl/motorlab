@@ -554,3 +554,41 @@ def calc_mean_loglik(gam_unit, family='poisson'):
     # Pr now has shape (nmod, ntask, nrep, nunit, nbin)
     # get one number per model...
     return get_mean_sem_0th_dim(Pr)
+    
+def calc_kendall_tau(gam_unit, average=False):
+    '''
+    Calculate Kendall tau value for predicted values. This tau scales between
+    -1 (prefect negative correlation) and 1 (perfect correlation). 
+    
+    gam_unit : GamUnit
+      has `actual` and `pred` attributes
+    average : bool
+      average across repeats before calculating tau
+    '''
+    assert(type(average) == bool)
+    
+    if not average:
+        act_flat = gam_sim.actual.flatten()
+        nans = np.isnan(act_flat)
+        act_flat = act_flat[~nans]
+    else:
+        act_flat = stats.nanmean(gam_sim.actual, axis=1).flatten()
+
+    tau = np.zeros((gam_unit.pred.shape[0])) + np.nan
+    P = np.zeros_like(tau) + np.nan
+    for i, pred in enumerate(gam_sim.pred):
+        if not average:
+            pred_flat = pred.flatten()[~nans]
+        else:
+            pred_flat = stats.nanmean(pred, axis=1).flatten()
+        tau[i], P[i] = stats.kendalltau(act_flat, pred_flat)
+    return tau, P
+
+def calc_mse(gam_unit):
+    actual = gam_unit.actual
+    pred = gam_unit.pred
+    se = (actual[None] - pred)**2
+    nmodel = se.shape[0]
+    se = np.reshape(se, [nmodel, np.prod(se.shape[1:])])
+    mse = stats.nanmean(se, axis=1)
+    return mse
