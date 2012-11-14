@@ -78,7 +78,7 @@ fit_gam = function (data.train, data.test, model, predict, family) {
     family = "poisson"
   }
   out = gam(formula, data=frame.train, family=family)
-  log = loglik(out)
+  logl = logLik.gam(out)
 
   coef = out$coefficients
   coefname = names(out$coefficients)
@@ -90,13 +90,13 @@ fit_gam = function (data.train, data.test, model, predict, family) {
     smooth = 0
   }
 
-  if (predict == 1) {
+  # don't predict for null model
+  if ((predict == 1) & (model != 'null')) {
     # may want to not do this bit, because it takes time
     prediction = predict(out, frame.test, type='response')
   } else {
-    prediction = 0
+    prediction = rep(NA, nrow(frame.test))
   }
-  
-  list(coef, coefname, smooth, prediction, logl)
+  list(coef, coefname, smooth, prediction, logl[1], attr(logl, 'df')[1])
   #list(coef, coefname, smooth, prediction)
 }

@@ -16,12 +16,15 @@ ro.r('source("%s/fit_gam.R")' % rdir)
 rgam = ro.r('fit_gam')
 
 sbt = "$_t$"
-modellist = ["kd","kdp","kds","kdps","kv","kvp","kvs","kvps","null"]
+modellist = ["kd","kdp","kds","kdps","kv","kvp","kvs","kvps"]
 pretty_modellist = modellist + \
     ["kd"+sbt,"kd"+sbt+"p","kd"+sbt+"s", "kd"+sbt+"ps",
      "kv"+sbt,"kv"+sbt+"p","kv"+sbt+"s","kv"+sbt+"ps"]
-modellist += [x + 'X' for x in modellist] + ["null"]
+modellist += [x + 'X' for x in modellist]
+modellist += ['null']
 max_ncoef = 35
+
+# *** need to add logl to load and save and ... functions ***
 
 '''
 Notes
@@ -106,9 +109,12 @@ class GAMOneModel(object):
             sm = np.array(rdata[2])
             tm = train_time
             self.smooth = np.concatenate([tm[:,None], sm], axis=1)
+            
         # ntrial * nbin * 3
         self.pred = np.array(rdata[3]).reshape(test_shape)
         # ntest, nbin
+        self.logl = np.array(rdata[4])
+        self.logl_df = np.array(rdata[5], dtype=int)
 
 class GAMUnit(object):
     '''
@@ -167,6 +173,8 @@ class GAMUnit(object):
         
         # will have `nmodel` points per point in original data
         self.pred         = np.zeros([nmodel,] + list(actual.shape)) + np.nan
+        self.logl         = np.zeros([nmodel, ncv]) + np.nan
+        self.logl_df      = np.zeros([nmodel, ncv], dtype=int)
 
     def save(self, file_name):
         '''
@@ -187,13 +195,22 @@ class GAMUnit(object):
                 'actual'     : self.actual,
                 'pred'       : self.pred,
                 'perm'       : self.perm,
-                'ncv'        : self.coef.shape[1]}
+                'ncv'        : self.coef.shape[1],
+                'logl'       : self.logl,
+                'logl_df'    : self.logl_df}
         np.savez(file_name, **data)
 
     def __setitem__(self, idx, data):
         '''
         Parameters
         ----------
+        idx : tuple
+          index of (imodel, icv)
+        data : tuple
+          gam_out, test
+        
+        where
+        
         gam_out : GAMOneModel
           result of a single call to fit_gam.R's fit_gam
           has
@@ -202,6 +219,7 @@ class GAMUnit(object):
             smooth - concatenate along pts axis (0)
             pred - use permutation to put values in appropriate place
               relative to actual
+            logl - loglikelihood of prediction
 
         Notes
         -----        
@@ -218,7 +236,7 @@ class GAMUnit(object):
         #   time points depending on time of trial (bins)
         if not idx[0] in modellist:
             raise ValueError("`model` not known.")
-        midx = modellist.index(idx[0])
+        midx = modellist.index(model)
         
         self.coef[midx, cvidx,:len(gam_out.coef)] = gam_out.coef
         
@@ -230,9 +248,11 @@ class GAMUnit(object):
                               == gam_out.coef_names):
                 raise ValueError("coef_names are not as expected")
                 
-        nsmooth_models = len(modellist) / 2
-        if midx >= nsmooth_models:
-            smidx = midx - nsmooth_models
+        # assume kdX is the first smooth model, 
+        # and all unsmooth models precede it
+        nunsmooth_models = modellist.index('kdX')
+        if 'X' in model:
+            smidx = midx - nunsmooth_models
             start = self.smooth_place[smidx]
             stop = start + gam_out.smooth.shape[0]
             self.smooth[smidx, start:stop] = gam_out.smooth
@@ -246,6 +266,8 @@ class GAMUnit(object):
         unpermuted = self.pred[midx]
         unpermuted[self.perm] = permuted
         self.pred[midx] = unpermuted
+        self.logl[midx, cvidx] = gam_out.logl
+        self.logl_df[midx, cvidx] = gam_out.logl_df
                         
 def load_gam_unit(file_name):
     gf = np.load(file_name)   
@@ -261,6 +283,8 @@ def load_gam_unit(file_name):
     gam_unit.smooth  = gf['smooth']
     gam_unit.coef    = gf['coef']
     gam_unit.coef_names = gf['coef_names']
+    gam_unit.logl    = gf['logl']
+    gam_unit.logl_df = gf['logl_df']
     return gam_unit
         
 def fold_repeats(out, bnd):
@@ -285,7 +309,8 @@ def fold_repeats(out, bnd):
     out.pred = pred_folded
     out.actual = bnd.count
     
-def gam_predict_cv(bnd, models, metadata, nfold=10, family='poisson'):
+def gam_predict_cv(bnd, models, metadata, nfold=10, family='poisson',
+    verbosity=0):
     '''
     Parameters
     ----------
@@ -299,7 +324,8 @@ def gam_predict_cv(bnd, models, metadata, nfold=10, family='poisson'):
       number of CV folds to perform
     family : string
       'poisson' or 'gaussian', noise model to assume when fitting
-      
+    verbosity : int
+      level of reporting to do (0=None, 1=CV, 2=CV,model)
     Notes
     -----
     Problem with KFold cross-validation is that last one doesn't necessarily
@@ -340,7 +366,8 @@ def gam_predict_cv(bnd, models, metadata, nfold=10, family='poisson'):
         #if icv != 0:
         #    print "only doing first CV!"
         #    continue
-        print "Processing cross-validation #%d" % (icv)
+        if verbosity > 0:
+            print "Processing cross-validation #%d" % (icv)
         # format training data to:
         # y, t, dx, dy, dz, px, py, pz, vx, vy, vz, sp
         # and all the same length
@@ -349,7 +376,8 @@ def gam_predict_cv(bnd, models, metadata, nfold=10, family='poisson'):
         #print "in cv, count train: %d x %d " % (_[0], _[1])
         #_ = count[perm][test].shape
         #print "in cv, count test: %d x %d " % (_[0], _[1])
-        print "mean count: %0.3f" % (np.mean(count[perm][train]))
+        if verbosity > 0:
+            print "mean count: %0.3f" % (np.mean(count[perm][train]))
         
         data_train = _format_for_gam(count[perm][train], 
                                      time[perm][train],
@@ -367,7 +395,8 @@ def gam_predict_cv(bnd, models, metadata, nfold=10, family='poisson'):
        
         # loop over models
         for model in models:
-            print "Processing %s" % (model)
+            if verbosity > 1:
+                print "Processing %s" % (model)
             # do gam, get prediction
             rout = rgam(data_train, data_test, model, True, family)
             gam_one = GAMOneModel(rout, data_train[:,1], count[test].shape)
@@ -542,14 +571,11 @@ def calc_mean_loglik(gam_unit, family='poisson'):
         # only needs mean shape parameter
         Pr = -2 * stats.poisson.logpmf(gam_unit.actual, gam_unit.pred)
     else:
-        print "*"
         # normal needs means and variance
         # shape handling here calculates average across repeats,
         # but keeps that dimension for broadcasting purposes
         pred_mean = stats.nanmean(gam_unit.pred, axis=2)[:,:,None]
         pred_std = stats.nanstd(gam_unit.pred, axis=2)[:,:,None]
-        
-        print pred_std.flatten()[0], pred_mean.flatten()[0]
         
         Pr = -2 * stats.norm.logpdf(gam_unit.actual, gam_unit.pred, pred_std)
     
@@ -594,3 +620,10 @@ def calc_mse(gam_unit):
     se = np.reshape(se, [nmodel, np.prod(se.shape[1:])])
     mse = stats.nanmean(se, axis=1)
     return mse
+
+def calc_nagelkerke_r2(gam_unit):
+    n  = gam_unit.actual.size
+    l0 = gam_unit.logl[-1] # log likelihood for null model
+    lm = gam_unit.logl[:-1] # log likelihood for other models
+    return (1 - (l0/lm)**(2/n)) / (1 - l0)**(2/n)
+    
