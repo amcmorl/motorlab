@@ -16,11 +16,11 @@ ro.r('source("%s/fit_gam.R")' % rdir)
 rgam = ro.r('fit_gam')
 
 sbt = "$_t$"
-modellist = ["kd","kdp","kds","kdps","kv","kvp","kvs","kvps"]
+modellist = ["kd","kdp","kds","kdps","kv","kvp","kvs","kvps","null"]
 pretty_modellist = modellist + \
     ["kd"+sbt,"kd"+sbt+"p","kd"+sbt+"s", "kd"+sbt+"ps",
      "kv"+sbt,"kv"+sbt+"p","kv"+sbt+"s","kv"+sbt+"ps"]
-modellist += [x + 'X' for x in modellist]
+modellist += [x + 'X' for x in modellist] + ["null"]
 max_ncoef = 35
 
 '''
@@ -460,29 +460,31 @@ def unpack_coefficients(p, pname):
     elif ('s(t):vx.1' in pname):
         d, dynamic = 'v', True
     else:
-        raise ValueError('Oops - all models should have "d"'
-                         ' or "v" in them, instead have %s.' % (pname))
-    if not dynamic:
-        dx = p[:,np.flatnonzero(pname == '%sx' % (d))].squeeze()
-        dy = p[:,np.flatnonzero(pname == '%sy' % (d))].squeeze()
-        dz = p[:,np.flatnonzero(pname == '%sz' % (d))].squeeze()
-        bdict[d] = np.array([dx, dy, dz])
-    else:
-        # identify number of bins
-        pattern = 's(t):%sx' % (d)
-        nbin = np.sum([pattern in x for x in pname])
-        
-        darr = np.zeros((3, ncv, nbin))
-        bdict[d] = darr
-        for i, dim in enumerate(dims):
-            first, last = ['s(t):%s%s.%s' % (d, dim, j) \
-                               for (j) in [1, nbin]]
-            fidx = np.flatnonzero(pname == first)[0]
-            lidx = np.flatnonzero(pname == last)[0]
-            darr[i] = p[:, fidx:lidx + 1]
+        d, dynamic = 'none', False
+    #    raise ValueError('Oops - all models should have "d"'
+    #                     ' or "v" in them, instead have %s.' % (pname))
+    if (d != 'none'):
+        if not dynamic:
+            dx = p[:,np.flatnonzero(pname == '%sx' % (d))].squeeze()
+            dy = p[:,np.flatnonzero(pname == '%sy' % (d))].squeeze()
+            dz = p[:,np.flatnonzero(pname == '%sz' % (d))].squeeze()
+            bdict[d] = np.array([dx, dy, dz])
+        else:
+            # identify number of bins
+            pattern = 's(t):%sx' % (d)
+            nbin = np.sum([pattern in x for x in pname])
             
-            #darr_av = np.mean(darr, axis=1)
-            #darr_ = unitvec(darr_av, axis=0)
+            darr = np.zeros((3, ncv, nbin))
+            bdict[d] = darr
+            for i, dim in enumerate(dims):
+                first, last = ['s(t):%s%s.%s' % (d, dim, j) \
+                                   for (j) in [1, nbin]]
+                fidx = np.flatnonzero(pname == first)[0]
+                lidx = np.flatnonzero(pname == last)[0]
+                darr[i] = p[:, fidx:lidx + 1]
+                
+                #darr_av = np.mean(darr, axis=1)
+                #darr_ = unitvec(darr_av, axis=0)
         
     if 'px' in pname:
         # get preferred position
