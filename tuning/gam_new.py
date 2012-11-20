@@ -24,8 +24,6 @@ modellist += [x + 'X' for x in modellist]
 modellist += ['null']
 max_ncoef = 35
 
-# *** need to add logl to load and save and ... functions ***
-
 '''
 Notes
 -----
@@ -34,7 +32,12 @@ trials together. This should be okay because the variables we are fitting, PD
 and PV, are theoretically trial-independent, i.e. curves are the same across all
 trials regardless of the direction of the individual trial. I'm not sure if this
 would be different for fitting position, but would need to be considered.
+
+To Do
+-----
+should really save number of samples used in each CV
 '''
+
 def _format_for_gam(count, time, pos):
     '''
     Format data for gam_predict_cv, i.e. an (n, 12) array
@@ -574,7 +577,7 @@ def calc_mean_loglik(gam_unit, family='poisson'):
         # normal needs means and variance
         # shape handling here calculates average across repeats,
         # but keeps that dimension for broadcasting purposes
-        pred_mean = stats.nanmean(gam_unit.pred, axis=2)[:,:,None]
+        #pred_mean = stats.nanmean(gam_unit.pred, axis=2)[:,:,None]
         pred_std = stats.nanstd(gam_unit.pred, axis=2)[:,:,None]
         
         Pr = -2 * stats.norm.logpdf(gam_unit.actual, gam_unit.pred, pred_std)
@@ -596,15 +599,15 @@ def calc_kendall_tau(gam_unit, average=False):
     assert(type(average) == bool)
     
     if not average:
-        act_flat = gam_sim.actual.flatten()
+        act_flat = gam_unit.actual.flatten()
         nans = np.isnan(act_flat)
         act_flat = act_flat[~nans]
     else:
-        act_flat = stats.nanmean(gam_sim.actual, axis=1).flatten()
+        act_flat = stats.nanmean(gam_unit.actual, axis=1).flatten()
 
     tau = np.zeros((gam_unit.pred.shape[0])) + np.nan
     P = np.zeros_like(tau) + np.nan
-    for i, pred in enumerate(gam_sim.pred):
+    for i, pred in enumerate(gam_unit.pred):
         if not average:
             pred_flat = pred.flatten()[~nans]
         else:
@@ -621,9 +624,30 @@ def calc_mse(gam_unit):
     mse = stats.nanmean(se, axis=1)
     return mse
 
-def calc_nagelkerke_r2(gam_unit):
-    n  = gam_unit.actual.size
-    l0 = gam_unit.logl[-1] # log likelihood for null model
-    lm = gam_unit.logl[:-1] # log likelihood for other models
-    return (1 - (l0/lm)**(2/n)) / (1 - l0)**(2/n)
+def calc_nagelkerkes_r2(gam_unit):
+    '''
+    Calculate Nagelkerke's R^2 [1].
+    
+    Nagelkerke NJD (1991). A Note on a General Definition of 
+    the Coefficient of Determination. Biometrika 78, 691-692.
+    
+    Notes
+    -----
+    
+    Nagelkerke's R2 is given by:
+    
+    .. math:: R^2 = \frac{1 - \frac{L(0)}{L(\hat\theta)^{2/n}}}{1-(L(0))^{2/n}}
+    '''
+    # for some reason, actual # non-nans > pred # non-nans
+    n  = (~np.isnan(gam_unit.pred[0])).sum().astype(float)
+    
+    l0 = gam_unit.logl[-1] # log likelihood for null model, shape 10
+    lm = gam_unit.logl # log likelihood for other models, shape (17,10)
+    R2s = (1 - (l0/lm)**(2/n)) / (1 - l0)**(2/n)
+    
+    # take mean across cross-validations
+    # should really use a weighted mean, 
+    # taking into account size of each CV
+    return np.mean(R2s, axis=1)
+    
     
