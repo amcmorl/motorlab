@@ -542,7 +542,7 @@ def compress_late_dims(arr):
     n = arr.shape[0]
     return np.reshape(arr, [n, np.prod(arr.shape[1:])])
 
-def get_mean_sem_0th_dim(arr):
+def get_mean_sem_of_samples(arr):
     '''
     Compress all dims > 0 to a single mean and SEM.
     '''
@@ -552,7 +552,14 @@ def get_mean_sem_0th_dim(arr):
     sem = stats.nanstd(arr_, axis=1) / np.sqrt(N)
     return mean, sem, N
 
-def calc_mean_loglik(gam_unit, family='poisson'):
+def get_sum_of_samples(arr):
+    '''
+    Compress all dims > 0 to a single sum.
+    '''
+    arr_ = compress_late_dims(arr)
+    return np.nansum(arr_, axis=1)
+
+def calc_sample_loglik(gam_unit, family='poisson'):
     '''
     Calculate log likelihood loss function for Poisson or Gaussian
     distributed data.
@@ -577,14 +584,32 @@ def calc_mean_loglik(gam_unit, family='poisson'):
         # normal needs means and variance
         # shape handling here calculates average across repeats,
         # but keeps that dimension for broadcasting purposes
-        #pred_mean = stats.nanmean(gam_unit.pred, axis=2)[:,:,None]
         pred_std = stats.nanstd(gam_unit.pred, axis=2)[:,:,None]
-        
         Pr = -2 * stats.norm.logpdf(gam_unit.actual, gam_unit.pred, pred_std)
     
     # Pr now has shape (nmod, ntask, nrep, nunit, nbin)
     # get one number per model...
-    return get_mean_sem_0th_dim(Pr)
+    return get_mean_sem_of_samples(Pr)
+    
+def calc_loglik(gam_unit, family='poisson'):
+    '''
+    Calculate log likelihood for Poisson or Gaussian distributed data.
+    '''
+    assert family in ['poisson', 'gaussian']
+    
+    if family == 'poisson':
+        # only needs mean shape parameter
+        Pr = stats.poisson.logpmf(gam_unit.actual, gam_unit.pred)
+    else:
+        # normal needs means and variance
+        # shape handling here calculates average across repeats,
+        # but keeps that dimension for broadcasting purposes
+        pred_std = stats.nanstd(gam_unit.pred, axis=2)[:,:,None]
+        Pr = stats.norm.logpdf(gam_unit.actual, gam_unit.pred, pred_std)
+        
+    # Pr now has shape (nmod, ntask, nrep, nunit, nbin)
+    # get one number per model...
+    return get_sum_of_samples(Pr)
     
 def calc_kendall_tau(gam_unit, average=False):
     '''
@@ -600,10 +625,10 @@ def calc_kendall_tau(gam_unit, average=False):
     
     if not average:
         act_flat = gam_unit.actual.flatten()
-        nans = np.isnan(act_flat)
-        act_flat = act_flat[~nans]
     else:
         act_flat = stats.nanmean(gam_unit.actual, axis=1).flatten()
+    nans = np.isnan(act_flat)
+    act_flat = act_flat[~nans]
 
     tau = np.zeros((gam_unit.pred.shape[0])) + np.nan
     P = np.zeros_like(tau) + np.nan
@@ -616,6 +641,14 @@ def calc_kendall_tau(gam_unit, average=False):
     return tau, P
 
 def calc_mse(gam_unit):
+    '''
+    Calculate the Mean Squared Error (MSE) of a prediction.
+    
+    Is the mean across samples of the squared difference between actual and
+    predicted values.
+    
+    .. math:: \text{MSE} = <(Y_{\mathrm{act} - Y_{pred})^2>_\mathrm{n}
+    '''
     actual = gam_unit.actual
     pred = gam_unit.pred
     se = (actual[None] - pred)**2
@@ -638,12 +671,20 @@ def calc_nagelkerkes_r2(gam_unit):
     
     .. math:: R^2 = \frac{1 - \frac{L(0)}{L(\hat\theta)^{2/n}}}{1-(L(0))^{2/n}}
     '''
+    # check last model is intercept-only
+    assert(gam_unit.coef_names[-1][0] == '(Intercept)')
+    assert(np.all(gam_unit.coef_names[-1][1:] == ''))
+    
+    logl0 = gam_unit.logl[-1] # log likelihood for null model, shape 10
+    loglm = gam_unit.logl     # log likelihood for other models, shape (17,10)
+    
     # for some reason, actual # non-nans > pred # non-nans
     n  = (~np.isnan(gam_unit.pred[0])).sum().astype(float)
-    
-    l0 = gam_unit.logl[-1] # log likelihood for null model, shape 10
-    lm = gam_unit.logl # log likelihood for other models, shape (17,10)
-    R2s = (1 - (l0/lm)**(2/n)) / (1 - l0)**(2/n)
+
+    # do most of calculations in log space to avoid numeric over/underflows
+    numerator   = 1 - np.exp(2/n * (logl0 - loglm))
+    denominator = 1 - np.exp(2/n * logl0)
+    R2s = numerator / denominator
     
     # take mean across cross-validations
     # should really use a weighted mean, 

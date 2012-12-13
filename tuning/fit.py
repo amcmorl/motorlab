@@ -1,6 +1,6 @@
 import numpy as np
 #from multiregress import multiregress, rsq_from_b
-import scikits.statsmodels.api as sm
+import statsmodels.api as sm
 from motorlab.kinematics import get_vel, get_dir
 
 nonan = lambda x: not np.any(np.isnan(x))
@@ -213,7 +213,7 @@ def prepare_regressors(count, pos, time, model=''):
         exog = add_column(exog, var_flat)
 
     if 'k' in model:
-        exog = sm.tools.add_constant(exog)
+        exog = sm.tools.add_constant(exog, prepend=False)
 
     offset = np.log(np.diff(time, axis=-1).reshape(nvar))
 

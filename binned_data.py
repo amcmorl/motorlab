@@ -395,19 +395,20 @@ class BinnedData:
         if self.count == None:
             raise ValueError('count component does not exist.')
         
-        self.count = self.count[:,:,dsets]
-        if 'count_flat' in self.__dict__.keys():
-            self.count_flat = self.count_flat[:,dsets]
-        
-        self.unit_names = self.unit_names[dsets]
-        if self.lags != None:
-            self.lags = self.lags[dsets]
-            
-        if keep_dims and np.isscalar(dsets):
+        if not (keep_dims and np.isscalar(dsets)):
+            self.count = self.count[:,:,dsets]
+            self.unit_names = self.unit_names[dsets]
+            if 'count_flat' in self.__dict__.keys():
+                self.count_flat = self.count_flat[:,dsets]
+            if self.lags != None:
+                self.lags = self.lags[dsets]
+        else:
             # insert 1-long dimension to keep dset dimension intact
-            self.count = self.count[:,:,None]
-            self.unit_names = self.unit_names.reshape((1,))
-            self.lags = self.lags.reshape((1,))
+            self.count = self.count[:,:,dsets:dsets+1]
+            # simple bnd, no unit renaming had been req.
+            self.unit_names = self.unit_names[dsets:dsets+1]
+            if self.lags != None:
+                self.lags = self.lags[dsets:dsets+1]
             
     def with_only(self, dsets, keep_dims=True):
         '''
@@ -533,6 +534,10 @@ class BinnedData:
         '''
         return deepcopy(self)
 
+# ----------------------------------------------------------------------------
+# utility routines
+# ----------------------------------------------------------------------------
+
 def load_binned_data(file):
     '''
     Loads a BinnedData instance from a file (saved by SortedData.save)
@@ -593,6 +598,7 @@ def _make_count_from_rate(rate, bin_edges):
     count = np.zeros_like(est_count)
 
     # False for nans and negatives
+    # which will keep 0 values for count
     nonneg = est_count >= 0
     count[nonneg] = np.random.poisson(est_count[nonneg])
 

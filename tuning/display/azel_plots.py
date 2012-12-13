@@ -74,7 +74,7 @@ def plot_many_azel(data, task, pds, ncol=4,
                    labels=None, figsize=None,
                    **kwargs):
     nazel = data.shape[0]
-    print "Figsize", figsize
+    #print "Figsize", figsize
     fig = plt.figure(figsize=figsize)
     if nazel < ncol:
         ncol = nazel
@@ -99,7 +99,8 @@ def plot_many_azel(data, task, pds, ncol=4,
     return fig, gs
 
 def plot_azel(data, task, pd, resolution=100, cbar=True,
-              subplot_spec=None, fig=None, label=''):
+              subplot_spec=None, fig=None, label='', vscale=None,
+              labelpad=0.05):
     '''
     Parameters
     ----------
@@ -119,16 +120,29 @@ def plot_azel(data, task, pd, resolution=100, cbar=True,
     fig : matplotlib Figure or None
       only used if subplot_spec is not None
       existing figure in which to draw plot
+    vscale : tuple (float, float)
+      min and max color scale values
+    labelpad : float
+      spacing between top of plots and label
     '''
     assert(np.rank(data) == 2)
     assert(data.shape[1] == task.shape[0])
     assert(pd.shape == (3,))
     assert(type(resolution) == int)
     assert((subplot_spec == None) == (fig == None))
+    assert((vscale == None) | ((type(vscale) == tuple)))
+    if type(vscale) == tuple:
+        assert((len(vscale) == 2))
+        assert(np.isscalar(vscale[0]))
+    assert((type(cbar) == bool) | (cbar == 'ghost'))
     
     ntime = data.shape[0]
-    vmin = np.min(data)
-    vmax = np.max(data)
+    if vscale != None:
+        vmin = vscale[0]
+        vmax = vscale[1]
+    else:
+        vmin = np.min(data)
+        vmax = np.max(data)
     co = sort.get_center_out(task)
 
     height_ratios = [1,] * ntime
@@ -146,10 +160,10 @@ def plot_azel(data, task, pd, resolution=100, cbar=True,
         gs = GridSpec(ntime + extra, 2, hspace=0.0, wspace=0.0,
                       left=0, right=1., bottom=0,
                       height_ratios=height_ratios)
-        #m = ptl.Margins(left=0.0, bottom=0.0, right=0.0, top=0.0,
-        #                hgap=0., vgap=0.)
-        #ax_rects = ptl.get_ax_rects(np.arange(ntime * 2), 2, ntime,
-        #                            margin=m, direction='col')
+        top = gs[0,0].get_position(fig).y1
+        left = gs[0,0].get_position(fig).x0
+        right = gs[0,1].get_position(fig).x1
+        center = (left + right) / 2.
     else:
         # subplot_spec != None
         #m = ptl.subplot_spec2margins(subplot_spec, fig)
@@ -159,6 +173,9 @@ def plot_azel(data, task, pd, resolution=100, cbar=True,
                                      subplot_spec=subplot_spec)
         #gs.update(left=0.1, right=0.9, bottom=0.1, hspace=0.05, wspace=0.05)
         gs.set_height_ratios(height_ratios)
+        box = subplot_spec.get_position(fig)
+        top = box.y1
+        center = (box.x0 + box.x1) / 2.
     
     for i, which in enumerate([co, ~co]):
         mapped_data = _map_data(data[:,which], task[which], pd, resolution)
@@ -168,12 +185,12 @@ def plot_azel(data, task, pd, resolution=100, cbar=True,
             ax.imshow(mapped_data[j], vmin=vmin, vmax=vmax, aspect='auto')
             ax.set_xticks([])
             ax.set_yticks([])
+    
+    if label != '':
+        fig.text(center, top + labelpad, label, fontsize='large', ha='center')
 
-    #top = ax_rects[0,0] + ax_rects[0,2]
-    #right = ax_rects[0,1] + ax_rects[0,3] + 0.005
-    #fig.text(top, right, label, fontsize='large', ha='center')
-
-    if cbar:
+    # explicit boolean check to avoid cbar == 'ghost' case
+    if cbar == True:
         cbax = fig.add_subplot(gs[-1,:], aspect=0.15)
         cb = plt.colorbar(ax.images[0], cbax, orientation='horizontal')
         clim = cb.get_clim()
@@ -181,3 +198,33 @@ def plot_azel(data, task, pd, resolution=100, cbar=True,
         cb.set_ticklabels(['%0.1f' % x for x in clim])
 
     return fig
+
+def plot_array_azel(bnd, arr, vscale='each'):
+    '''
+    Plot azels of data from an array, with an arbitrary PD.
+    
+    Parameters
+    ----------
+    bnd : BinnedData
+      used for tasks only
+    score : ndarray
+      data to plot, shape (ndata, ntask, nbin)
+    vscale : string
+      if 'each', use cmap from each data set separately
+      if 'all', use min and max of total arr to colour
+    '''
+    pd = np.array([0.,1.,0.]) # default for no rotation (???)
+    nscore = arr.shape[0]
+    pds = np.tile(pd[None], (nscore, 1))
+    labels = ['PC %d' % (x + 1) for x in xrange(nscore)]
+    if vscale == 'each':
+        vscale = None
+    elif vscale == 'all':
+        vscale = (np.nanmin(arr), np.nanmax(arr))
+    fig, gs = plot_many_azel(arr, bnd.tasks, pds,
+                             labels=labels, figsize=(6,8), vscale=vscale)
+    return fig
+    
+    
+    
+    
