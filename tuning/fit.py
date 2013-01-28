@@ -1,6 +1,6 @@
 import numpy as np
 #from multiregress import multiregress, rsq_from_b
-import scikits.statsmodels.api as sm
+import statsmodels.api as sm
 from motorlab.kinematics import get_vel, get_dir
 
 nonan = lambda x: not np.any(np.isnan(x))
