@@ -5,7 +5,7 @@ from scipy import stats
 # generic calc stuff
 from amcmorl_py_tools.vecgeom.rotations import rotate_by_angles
 from amcmorl_py_tools.vecgeom.measure import angle_between
-from amcmorl_py_tools.spherical import cart2pol
+from amcmorl_py_tools.vecgeom.coords import cart2pol
 from amcmorl_py_tools import plot_tools
 from amcmorl_py_tools.vecgeom import unitvec
 
@@ -29,6 +29,9 @@ def get_pc_pd_r2(scores, bnd, preaveraged=False):
     score : ndarray
       scores of principal components
       shape (npc, ntask, nbin)
+    bnd : BinnedData
+    preaveraged : bool
+      if scores contain repeats or not
     '''
     if preaveraged:
         pos = stats.nanmean(bnd.pos, axis=1)

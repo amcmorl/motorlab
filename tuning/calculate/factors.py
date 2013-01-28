@@ -24,7 +24,7 @@ def _scale_reduced_arr(arr, which):
     return reduced * full_scale / reduced_scale
 
 def get_reduced_neurons(score, which_scores, weight, bnd, 
-    preaveraged=False, keep_scale=False):
+    preaveraged=False, scale=False):
     '''
     Project firing activity (in `bnd`) on to a space of reduced factors, 
     given by `which_scores` of `scores`.
@@ -52,7 +52,7 @@ def get_reduced_neurons(score, which_scores, weight, bnd,
     assert score.shape[0] == weight.shape[0] # npc
     
     # select subset of scores
-    if not keep_scale:
+    if not scale:
         reduced_score = score[which_scores]
         reduced_weight = weight[which_scores]
     else:
@@ -222,6 +222,31 @@ def calc_pcs_learn(bnd, npc=None, preaverage=False, use_unbiased=False):
     print "calc_pcs_learn deprecated! Use calc_pca instead."
     return calc_pca(bnd, npc=npc, preaverage=preaverage,
         use_unbiased=use_unbiased, method='skl')
+
+def calc_pcs_variance_explained(bnd, preaverage=False, 
+    use_unbiased=False, method='skl'):
+    '''
+    Parameters
+    ----------
+    bnd : BinnedData
+      binned data
+    preaverage : bool
+      average across repeats?
+    use_unbiased : False
+      use the unbiased spike rates calculated using Rob Kass's
+      spike rate method
+    '''
+    assert type(method) == str
+    
+    data = format_for_fa(bnd, preaverage=preaverage,
+                     use_unbiased=use_unbiased)
+    
+    if method == 'skl':
+        pca_obj = PCA()
+        score = pca_obj.fit(data)
+        return pca_obj.explained_variance_ratio_
+    else:
+        raise ValueError('method %s not implemented' % method)
 
 def calc_pcs_variance_explained_mdp(bnd, preaverage=False, 
                                    use_unbiased=False):

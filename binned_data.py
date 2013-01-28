@@ -16,7 +16,7 @@ class BinnedData:
       shape (ntask, nrep, nbin + 1)
     pos : ndarray
       position data at bin edges, sorted as per PSTHs
-      shape (ntask, nrep, nbin + 1)
+      shape (ntask, nrep, nbin + 1, ndim)
     tasks : ndarray
       start and end positions of each task
       shape (ntask, 6)
@@ -30,15 +30,6 @@ class BinnedData:
       start and end points for trial alignment, if calculated
     scaled_spikes : list of list, optional
       spike times, scaled as per trials
-      
-    Parameters
-    ----------
-    bin_edges : ndarray
-      bin edge times, sorted as per PSTHs
-      shape (ntask, nrep, nbin + 1)
-    pos : ndarray
-      position data at bin edges, sorted as per PSTHs
-      shape (ntask, nrep, nbin + 1)
     '''
     full_output = False
     
@@ -386,21 +377,58 @@ class BinnedData:
         #if self.has_flat():
         #    self.count_flat = self.get_count_flat()
             
-    def keep_only(self, dsets):
+    def keep_only(self, dsets, keep_dims=False):
         '''
-        Trims count to only the dsets indexed in `dsets`.
+        Trims count to only the dsets indexed in `dsets`. Works inplace.
+        
+        Use with_only to make a copy.
         
         Parameters
         ----------
         dsets : array_like
           indices of datasets to keep, shape (n,)
+          
+        See Also
+        --------
+        BinnedData.with_only - create a copy of bnd with only certain dsets
         '''
         if self.count == None:
             raise ValueError('count component does not exist.')
         
-        self.count = self.count[:,:,dsets]
-        if 'count_flat' in self.__dict__.keys():
-            self.count_flat = self.count_flat[:,dsets]
+        if not (keep_dims and np.isscalar(dsets)):
+            self.count = self.count[:,:,dsets]
+            self.unit_names = self.unit_names[dsets]
+            if 'count_flat' in self.__dict__.keys():
+                self.count_flat = self.count_flat[:,dsets]
+            if self.lags != None:
+                self.lags = self.lags[dsets]
+        else:
+            # insert 1-long dimension to keep dset dimension intact
+            self.count = self.count[:,:,dsets:dsets+1]
+            # simple bnd, no unit renaming had been req.
+            self.unit_names = self.unit_names[dsets:dsets+1]
+            if self.lags != None:
+                self.lags = self.lags[dsets:dsets+1]
+            
+    def with_only(self, dsets, keep_dims=True):
+        '''
+        Return a copy of self containing only `dsets` data sets.
+        
+        Parameters
+        ----------
+        dsets : array_like
+          indices of datasets to keep, shape (n,)
+          
+        See Also
+        --------
+        BinnedData.keep_only - trim instances own data to only `dsets`
+        '''              
+        if self.count == None:
+            raise ValueError('count component does not exist.')
+        
+        cp = deepcopy(self)
+        cp.keep_only(dsets, keep_dims=keep_dims)
+        return cp
 
     def save(self, file):
         '''
@@ -506,6 +534,10 @@ class BinnedData:
         '''
         return deepcopy(self)
 
+# ----------------------------------------------------------------------------
+# utility routines
+# ----------------------------------------------------------------------------
+
 def load_binned_data(file):
     '''
     Loads a BinnedData instance from a file (saved by SortedData.save)
@@ -566,6 +598,7 @@ def _make_count_from_rate(rate, bin_edges):
     count = np.zeros_like(est_count)
 
     # False for nans and negatives
+    # which will keep 0 values for count
     nonneg = est_count >= 0
     count[nonneg] = np.random.poisson(est_count[nonneg])
 
