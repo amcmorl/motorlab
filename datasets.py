@@ -33,7 +33,7 @@ class DatasetSimpleUnitID(object):
             if self.branch == 'any':
                 warn("Active branch in data repository is %s" % \
                          (repo.active_branch))
-            elif not repo.active_branch == self.branch:
+            elif not str(repo.active_branch) == self.branch:
                 raise EnvironmentError("Active branch in data repository is"
                                        "%s, but %s is required." %
                                        (repo.active_branch, self.branch))
