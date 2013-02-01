@@ -3,9 +3,9 @@ from motorlab.data_files import CenOut_VR_RTMA_10_File, versions
 import motorlab.tuning.util as tc_util
 from warnings import warn
 from scipy.interpolate import splprep, splev
-from vectors import unitvec
+from amcmorl_py_tools.vecgeom import unitvec
 from motorlab.binned_data import BinnedData
-import motorlab.tuning.calculate.kinematics as kin
+import motorlab.kinematics as kin
 from identified_unit import IdentifiedUnit
 import os.path
 
