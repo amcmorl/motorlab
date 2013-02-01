@@ -11,9 +11,13 @@ from motorlab.vr.data_files import list_units
 # osmd = offline sorted multiday
 hostname = gethostname()
 home = os.environ['HOME']
-pitt_dir = home + '/files/pitt'
-raw_dir = pitt_dir + '/raw_data'
-datasets_config = raw_dir + '/datasets.conf'
+
+if hostname == 'amcopti':
+    pitt_dir = home + '/files/pitt'
+    raw_dir = pitt_dir + '/raw_data'
+    datasets_config = raw_dir + '/datasets.conf'
+else:
+    raise ValueError('datasets only defined on amcopti!')
 
 # has to be able to cope with branch specific datasets git-using repositories
 # and non-git-using repositories
@@ -63,7 +67,6 @@ for dataset_name in config.sections():
         git_branch = config.get(dataset_name, 'git_branch')
         datasets[dataset_name] = DatasetSimpleUnitID(root, git_branch, days)
     else:
-        
         warn('Cannot handle non-simple dataset types yet.')
     
 def pick_units_by_number(units, cond='>100'):
