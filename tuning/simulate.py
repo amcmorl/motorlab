@@ -115,7 +115,7 @@ def make_tgt_dir_rate(tgt, pos, pd, kd, sqp={}):
     rate = np.dot(drn, pd.T) * kd
     set_squash_defaults(sqp, rate)
     return squash(rate, sqp)
-    
+       
 def generate_firing_rate2(pos, PD=None, PG=None,
                           k={}, tau={}, model='kd'):
     ''' Generate simulated firing rate of a single cell during a single reach.
@@ -239,10 +239,10 @@ def generate_firing_rate2(pos, PD=None, PG=None,
 
     if 'n' in model:
         # noise
-	fr[fr < 0] = 1e-8
-	mask = fr.mask.copy()
-	fr[:] = poisson.rvs(fr * k['n'], size=fr.shape) / float(k['n'])
-	fr.mask |= mask
+        fr[fr < 0] = 1e-8
+        mask = fr.mask.copy()
+        fr[:] = poisson.rvs(fr * k['n'], size=fr.shape) / float(k['n'])
+        fr.mask |= mask
     return fr
 
 def add_with_lag(fr, component, lag):
