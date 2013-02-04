@@ -18,7 +18,8 @@ from motorlab.tuning.calculate import factors
 
 # plotting stuff
 from amcmorl_py_tools.vecgeom.plot import generate_cone_circle
-from motorlab.tuning.display import orange_plots
+#from motorlab.tuning.display import orange_plots
+import amcmorl_py_tools.split_lambert_projection
 from mayavi import mlab
 
 def get_pc_pd_r2(scores, bnd, preaveraged=False):
@@ -233,16 +234,16 @@ def plot_tuning_trajectories(pd, ca, dsname='', npc=4):
         #~ figs.append(fig)
     #~ return figs
         
-def plot_scores(score, ntask, nscore=8, save_dir=''):
-    score_folded = factors.format_from_fa(score, ntask)
-    label = ['PC %d' % (i+1) for i in range(score.shape[0])]
-    fig = plt.figure(figsize=(6,4))
-    orange_plots.plot_orchard(score_folded[:nscore], fig=fig,
-                                    label=label, ncol=4)
-    if save_dir != '':
-        name = get_out_name(save_dir, 'scores_orchard', ext='pdf')
-        fig.savefig(name, dpi=600)
-    return fig
+#~ def plot_scores(score, ntask, nscore=8, save_dir=''):
+    #~ score_folded = factors.format_from_fa(score, ntask)
+    #~ label = ['PC %d' % (i+1) for i in range(score.shape[0])]
+    #~ fig = plt.figure(figsize=(6,4))
+    #~ orange_plots.plot_orchard(score_folded[:nscore], fig=fig,
+                                    #~ label=label, ncol=4)
+    #~ if save_dir != '':
+        #~ name = get_out_name(save_dir, 'scores_orchard', ext='pdf')
+        #~ fig.savefig(name, dpi=600)
+    #~ return fig
 
 #def calc_pc_score_pd_rsq(scores, bnd):
 #    '''Calculate r2 of pc scores to direction regression.
