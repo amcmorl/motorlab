@@ -163,7 +163,6 @@ def plot_trajectories_other(pos):
     f.scene.disable_render = False
     return surf
 
-    
 def plot_trajectory_points(pos, color=(0., 0., 1.)):
     '''
     '''

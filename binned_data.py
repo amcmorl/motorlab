@@ -619,8 +619,11 @@ def make_bnd_with_count_from_rate(rate, bnd):
     bnd : BinnedData
       binned data to base return value off
     '''
-    assert rate.shape == bnd.count.shape
+    #assert rate.shape == bnd.count.shape
+    assert rate.shape[0:2] == bnd.count.shape[0:2]
+    assert rate.shape[-1]  == bnd.count.shape[-1]
     count = _make_count_from_rate(rate, bnd.bin_edges)
     bndc = bnd.copy()
+    bndc.count = None
     bndc.set_count(count)
     return bndc

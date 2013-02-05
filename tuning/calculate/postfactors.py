@@ -19,7 +19,8 @@ from motorlab.tuning.calculate import factors
 # plotting stuff
 from amcmorl_py_tools.vecgeom.plot import generate_cone_circle
 #from motorlab.tuning.display import orange_plots
-import amcmorl_py_tools.split_lambert_projection
+import amcmorl_py_tools.vecgeom.split_lambert
+from motorlab.tuning.display import azel_plots
 from mayavi import mlab
 
 def get_pc_pd_r2(scores, bnd, preaveraged=False):
@@ -204,7 +205,40 @@ def plot_tuning_trajectories(pd, ca, dsname='', npc=4):
     for i in xrange(npc):
         figs.append( plot_tuning_trajectory(pd[i], ca[i]) )
     return figs
+
+def plot_scores(score, bnd, preaverage=False, vscale='each'):
+    '''
+    Create an az-el plot of the scores.
+
+    Parameters
+    ----------
+    score : ndarray
+      output straight from factors.project
+    bnd : BinnedData
+    preaverage : bool
+      is score averaged across repeats (True) or not (False)
+    '''
+    score_folded = factors.format_from_fa(score, bnd, preaveraged=preaverage)
     
+    if not preaverage:
+        score_to_plot = stats.nanmean(score_folded, axis=2)
+    else:
+        score_to_plot = score_folded
+    fig = azel_plots.plot_array_azel(bnd, score_to_plot, vscale=vscale)
+    return fig
+
+def plot_tuning_trajectory_gs(pd, ca, fig, gs):
+    tp = cart2pol(pd)
+    ax = fig.add_subplot(gs, projection='split_lambert')
+    _tp = tp.T
+    ax.plot(_tp[0], _tp[1], 'o-', color='k')
+    for j, angle in enumerate(ca):
+        pc_cart = generate_cone_circle(_tp[0,j], _tp[1,j],
+                                       angle, resolution=240)
+        pc = cart2pol(pc_cart).T
+        ax.plot(pc[0], pc[1], '-', lw=0.75, color='#606060')
+    return ax
+
 #~ def old_plot_tuning_trajectories(pd, theta, save_dir='', npc=4):
     #~ '''
     #~ Parameters

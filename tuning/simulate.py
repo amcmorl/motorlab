@@ -1,4 +1,5 @@
 import numpy as np
+from amcmorl_py_tools.vecgeom import norm
 import amcmorl_py_tools.vecgeom.stats as ss
 from scipy.stats.distributions import poisson
 from motorlab.kinematics import get_tgt_dir, get_dir
@@ -278,6 +279,8 @@ def generate_changing_PD(PDa, PDb, n_pts):
     PDa = np.asarray(PDa)
     PDb = np.asarray(PDb)
     assert PDa.size == PDb.size == 3
+    assert np.allclose(norm(PDa), 1)
+    assert np.allclose(norm(PDb), 1)
     angle_between = np.arccos(np.dot(PDa, PDb))
     angles = np.linspace(0, angle_between, n_pts)
     origin = np.zeros(3)
