@@ -21,7 +21,12 @@ from amcmorl_py_tools.vecgeom.plot import generate_cone_circle
 #from motorlab.tuning.display import orange_plots
 import amcmorl_py_tools.vecgeom.split_lambert
 from motorlab.tuning.display import azel_plots
-from mayavi import mlab
+
+try:
+    from mayavi import mlab
+    has_mlab = True
+except ImportError:
+    has_mlab = False
 
 def get_pc_pd_r2(scores, bnd, preaveraged=False):
     '''Calculate r2 of pc scores to direction regression.
@@ -84,62 +89,63 @@ def plot_rsq(rsq, save_dir='', n=20, color='#A02020'):
         fig.savefig(get_out_name(save_dir, 'pca_vs_rsq', ext='pdf'), dpi=600)
     return ax
 
-def plot_angles(pds, save_dir='', position=0):
-    # align axes
-    # let pds be A, B, C
-    # 1) rotate C to z axis
-    tpa = cart2pol(pds[2])
-    pds_r0 = rotate_by_angles(pds.T, tpa[0], tpa[1], reverse_order=True).T
-    # 2) rotate B to lie in x-z plane
-    # calculate angle between B[0:2] and x
-    # rotate B to lie on y=0 plane
-    phi = angle_between(pds_r0[1,0:2], np.array([1,0]))
-    pds_r1 = rotate_by_angles(pds_r0.T, 0, phi).T
-    
-    # plot vectors
-    ori = np.zeros_like(pds)
-    fig = mlab.figure(size=(2048,2048), bgcolor=(1,1,1))
-    fig.scene.disable_render = True
+if has_mlab:
+    def plot_angles(pds, save_dir='', position=0):
+        # align axes
+        # let pds be A, B, C
+        # 1) rotate C to z axis
+        tpa = cart2pol(pds[2])
+        pds_r0 = rotate_by_angles(pds.T, tpa[0], tpa[1], reverse_order=True).T
+        # 2) rotate B to lie in x-z plane
+        # calculate angle between B[0:2] and x
+        # rotate B to lie on y=0 plane
+        phi = angle_between(pds_r0[1,0:2], np.array([1,0]))
+        pds_r1 = rotate_by_angles(pds_r0.T, 0, phi).T
+        
+        # plot vectors
+        ori = np.zeros_like(pds)
+        fig = mlab.figure(size=(2048,2048), bgcolor=(1,1,1))
+        fig.scene.disable_render = True
 
-    # draw arrows for actual vectors
-    vrw = mlab.quiver3d(ori[0], ori[1], ori[2],
-                        pds_r1[:,0], pds_r1[:,1], pds_r1[:,2])
-    arrow_source = vrw.glyph.glyph_source.glyph_dict['arrow_source']
-    vrw.glyph.glyph_source.glyph_source = arrow_source
-    arrow_source.shaft_radius = 0.055
-    arrow_source.shaft_resolution = 40
-    arrow_source.tip_resolution = 40
+        # draw arrows for actual vectors
+        vrw = mlab.quiver3d(ori[0], ori[1], ori[2],
+                            pds_r1[:,0], pds_r1[:,1], pds_r1[:,2])
+        arrow_source = vrw.glyph.glyph_source.glyph_dict['arrow_source']
+        vrw.glyph.glyph_source.glyph_source = arrow_source
+        arrow_source.shaft_radius = 0.055
+        arrow_source.shaft_resolution = 40
+        arrow_source.tip_resolution = 40
 
-    # draw really orthogonal axes as guides
-    xyz = np.array([[2.,0,0],[0,2.,0],[0,0,2.]])
-    # if (angle between A and y axis) > pi/2.
-    # swap sign of y axis
-    if np.arccos(np.dot(pds_r1[0], np.array([0,1.,0.]))) > np.pi/2.:
-        xyz[1]*= -1
-    vax = mlab.quiver3d(ori[0], ori[1], ori[2],
-                        xyz[:,0], xyz[:,1], xyz[:,2])
-    cylinder_source = vax.glyph.glyph_source.glyph_dict['cylinder_source']
-    vax.glyph.glyph_source.glyph_source = cylinder_source
-    cylinder_source.resolution = 40
-    cylinder_source.radius = 0.03
-    vax.actor.actor.mapper.scalar_visibility = False
-    vax.actor.actor.property.color = (0.5,0.5,0.5)
+        # draw really orthogonal axes as guides
+        xyz = np.array([[2.,0,0],[0,2.,0],[0,0,2.]])
+        # if (angle between A and y axis) > pi/2.
+        # swap sign of y axis
+        if np.arccos(np.dot(pds_r1[0], np.array([0,1.,0.]))) > np.pi/2.:
+            xyz[1]*= -1
+        vax = mlab.quiver3d(ori[0], ori[1], ori[2],
+                            xyz[:,0], xyz[:,1], xyz[:,2])
+        cylinder_source = vax.glyph.glyph_source.glyph_dict['cylinder_source']
+        vax.glyph.glyph_source.glyph_source = cylinder_source
+        cylinder_source.resolution = 40
+        cylinder_source.radius = 0.03
+        vax.actor.actor.mapper.scalar_visibility = False
+        vax.actor.actor.property.color = (0.5,0.5,0.5)
 
-    if position == 1:
-        fig.scene.camera.position = [2.94, -3.06, 0.90]
-        fig.scene.camera.focal_point = [0.45, -0.45, 0.47]
-        fig.scene.camera.view_angle = 30.0
-        fig.scene.camera.view_up = [-0.10, 0.076, 1.0]
-        fig.scene.camera.clipping_range = [1.93, 5.78]
-        fig.scene.camera.compute_view_plane_normal()
+        if position == 1:
+            fig.scene.camera.position = [2.94, -3.06, 0.90]
+            fig.scene.camera.focal_point = [0.45, -0.45, 0.47]
+            fig.scene.camera.view_angle = 30.0
+            fig.scene.camera.view_up = [-0.10, 0.076, 1.0]
+            fig.scene.camera.clipping_range = [1.93, 5.78]
+            fig.scene.camera.compute_view_plane_normal()
 
-    # now draw it all
-    fig.scene.disable_render = False
+        # now draw it all
+        fig.scene.disable_render = False
 
-    if save_dir != '':
-        name = get_out_name(save_dir, 'ortho_angles', ext='png')
-        fig.scene.save_png(name)
-    return fig.scene
+        if save_dir != '':
+            name = get_out_name(save_dir, 'ortho_angles', ext='png')
+            fig.scene.save_png(name)
+        return fig.scene
 
 def calc_tuning_trajectories(scores, bnd, preaveraged=False):
     '''Calculate trajectory of preferred direction using "kdX" model.
@@ -176,18 +182,18 @@ def calc_tuning_trajectories(scores, bnd, preaveraged=False):
         #pds[i] = unitvec(bd, axis=1)
     return pds, cas
     
-def plot_tuning_trajectory(pd, ca, fig=None):
+def plot_tuning_trajectory(pd, ca, fig=None, pt_kwargs=None, ln_kwargs=None):
     tp = cart2pol(pd)
     if fig == None:
         fig = plt.figure(figsize=(10,5))
     ax = fig.add_subplot(111, projection='split_lambert')    
     _tp = tp.T
-    ax.plot(_tp[0], _tp[1], 'o-', color='k')
+    ax.plot(_tp[0], _tp[1], 'o-', color='k', **pt_kwargs)
     for j, angle in enumerate(ca):
         pc_cart = generate_cone_circle(_tp[0,j], _tp[1,j],
                                        angle, resolution=240)
         pc = cart2pol(pc_cart).T
-        ax.plot(pc[0], pc[1], '-', lw=0.75, color='#606060')
+        ax.plot(pc[0], pc[1], '-', lw=0.75, color='#606060', **ln_kwargs)
     return fig
     
 def plot_tuning_trajectories(pd, ca, dsname='', npc=4):
@@ -206,7 +212,8 @@ def plot_tuning_trajectories(pd, ca, dsname='', npc=4):
         figs.append( plot_tuning_trajectory(pd[i], ca[i]) )
     return figs
 
-def plot_scores(score, bnd, preaverage=False, vscale='each'):
+def plot_scores(score, bnd, preaverage=False, vscale='each', \
+    subplot_spec=None, fig=None):
     '''
     Create an az-el plot of the scores.
 
@@ -217,6 +224,8 @@ def plot_scores(score, bnd, preaverage=False, vscale='each'):
     bnd : BinnedData
     preaverage : bool
       is score averaged across repeats (True) or not (False)
+    subplot_spec : SubplotSpec, optional
+    fig : matplotlib.figure.Figure, optional
     '''
     score_folded = factors.format_from_fa(score, bnd, preaveraged=preaverage)
     
@@ -224,19 +233,29 @@ def plot_scores(score, bnd, preaverage=False, vscale='each'):
         score_to_plot = stats.nanmean(score_folded, axis=2)
     else:
         score_to_plot = score_folded
-    fig = azel_plots.plot_array_azel(bnd, score_to_plot, vscale=vscale)
+    fig = azel_plots.plot_array_azel(bnd, score_to_plot, vscale=vscale, \
+        subplot_spec=subplot_spec, fig=fig)
     return fig
 
-def plot_tuning_trajectory_gs(pd, ca, fig, gs):
+def plot_tuning_trajectory_gs(pd, ca, fig, gs, label=None, \
+        pt_kwargs=None, ln_kwargs=None):
+    if label != None:
+        assert(type(label) == str)
+    if pt_kwargs == None:
+        pt_kwargs = {}
+    if ln_kwargs == None:
+        ln_kwargs = {}
     tp = cart2pol(pd)
     ax = fig.add_subplot(gs, projection='split_lambert')
     _tp = tp.T
-    ax.plot(_tp[0], _tp[1], 'o-', color='k')
+    ax.plot(_tp[0], _tp[1], 'o-', color='k', **pt_kwargs)
     for j, angle in enumerate(ca):
         pc_cart = generate_cone_circle(_tp[0,j], _tp[1,j],
                                        angle, resolution=240)
         pc = cart2pol(pc_cart).T
-        ax.plot(pc[0], pc[1], '-', lw=0.75, color='#606060')
+        ax.plot(pc[0], pc[1], '-', lw=0.75, color='#606060', **ln_kwargs)
+    if label != None:
+        ax.set_title(label)
     return ax
 
 #~ def old_plot_tuning_trajectories(pd, theta, save_dir='', npc=4):

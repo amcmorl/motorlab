@@ -64,6 +64,9 @@ fit_gam = function (data.train, data.test, model, predict, family) {
     
   } else if (model == "kvpsX") {
     formula = y~s(t,by=vx) + s(t,by=vy) + s(t,by=vz) + px + py + pz + sp
+
+  } else if (model == "kqX") {
+    formula = y~dx + dy + dz + s(t,by=dx) + s(t,by=dy) + s(t,by=dz)
     
   } else if (model == 'null') {
     formula = y~1

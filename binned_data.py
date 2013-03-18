@@ -50,6 +50,10 @@ class BinnedData:
         Anything here?
         '''
         # should have some input testing
+        ntask, nrep, nedge = bin_edges.shape
+        ndim = pos.shape[-1]
+        assert(pos.shape == (ntask, nrep, nedge, ndim))
+        assert(tasks.shape == (ntask, ndim * 2))
         
         self.bin_edges = bin_edges
         self.pos = pos
@@ -534,6 +538,21 @@ class BinnedData:
         '''
         return deepcopy(self)
 
+    @property
+    def nrepeat(self):
+        return self.bin_edges.shape[1]
+
+    @property
+    def ntask(self):
+        return self.bin_edges.shape[0]
+
+    @property
+    def nbin(self):
+        return self.bin_edges.shape[-1] -1
+
+    @property
+    def nunit(self):
+        return self.count.shape[2]
 # ----------------------------------------------------------------------------
 # utility routines
 # ----------------------------------------------------------------------------
@@ -608,7 +627,9 @@ def _make_count_from_rate(rate, bin_edges):
     
     return count
 
-def make_bnd_with_count_from_rate(rate, bnd):
+def make_bnd_with_count_from_rate(rate, bnd, \
+        ignore_prev=False, \
+        rename_units=False):
     '''
     Make a copy of `bnd` with the count taken as a Poisson RVS based on `rate`.
 
@@ -619,11 +640,14 @@ def make_bnd_with_count_from_rate(rate, bnd):
     bnd : BinnedData
       binned data to base return value off
     '''
-    #assert rate.shape == bnd.count.shape
-    assert rate.shape[0:2] == bnd.count.shape[0:2]
-    assert rate.shape[-1]  == bnd.count.shape[-1]
+    if not ignore_prev:
+        assert rate.shape[0:2] == bnd.count.shape[0:2]
+        assert rate.shape[-1]  == bnd.count.shape[-1]
     count = _make_count_from_rate(rate, bnd.bin_edges)
     bndc = bnd.copy()
     bndc.count = None
     bndc.set_count(count)
+    if rename_units:
+        bndc.unit_names = np.asarray(['unit%d' % (x) \
+            for x in range(rate.shape[2])])
     return bndc

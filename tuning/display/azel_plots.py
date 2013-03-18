@@ -2,6 +2,7 @@ import numpy as np
 from amcmorl_py_tools.vecgeom import unitvec
 from amcmorl_py_tools.vecgeom.rotations import rotate_by_angles
 from amcmorl_py_tools.vecgeom.coords import pol2cart, cart2pol
+import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec
 from warnings import warn
@@ -70,12 +71,26 @@ def rotate_targets(directions, theta_phi):
     return np.apply_along_axis(rotate_by_angles, 1, directions,
                                theta_phi[0], theta_phi[1], True)
 
-def plot_many_azel(data, task, pds, ncol=4,
-                   labels=None, figsize=None,
-                   **kwargs):
+def plot_many_azel(data, task, pds, ncol=4, labels=None, \
+    figsize=None, subplot_spec=None, fig=None, **kwargs):
+    '''
+    Parameters
+    ----------
+    data : ndarray, shape (nazel, ntask, ntime)
+    task : ndarray, shape (ntask, ndim)
+    pds  : ndarray, shape (ntask, ndim)
+    ncol : int
+      number of columns
+    labels : list of str
+      labels for each plot
+    figsize : tuple
+    kwargs : dict
+      passed to `plot_azel`
+    '''
     nazel = data.shape[0]
-    #print "Figsize", figsize
-    fig = plt.figure(figsize=figsize)
+    if fig == None:
+        fig = plt.figure(figsize=figsize)
+    assert(type(fig) == matplotlib.figure.Figure)
     if nazel < ncol:
         ncol = nazel
         nrow = 1
@@ -83,7 +98,10 @@ def plot_many_azel(data, task, pds, ncol=4,
         nrow = nazel / ncol + int(nazel % ncol != 0)
         # add 1 [== int(True)] to nrow
         #   if ncol doesn't divide evenly into nazel
-    gs = GridSpec(nrow, ncol)
+    if subplot_spec == None:
+        gs = GridSpec(nrow, ncol)
+    else:
+        gs = GridSpecFromSubplotSpec(nrow, ncol, subplot_spec=subplot_spec)
     for i in xrange(data.shape[0]):
         plot_data = data[i]
         pd = pds[i]
@@ -100,7 +118,7 @@ def plot_many_azel(data, task, pds, ncol=4,
 
 def plot_azel(data, task, pd, resolution=100, cbar=True,
               subplot_spec=None, fig=None, label='', vscale=None,
-              labelpad=0.05):
+              labelpad=0.025, frame_width=None):
     '''
     Parameters
     ----------
@@ -185,6 +203,9 @@ def plot_azel(data, task, pd, resolution=100, cbar=True,
             ax.imshow(mapped_data[j], vmin=vmin, vmax=vmax, aspect='auto')
             ax.set_xticks([])
             ax.set_yticks([])
+    if frame_width != None:
+        for loc, sp in ax.spines.iteritems():
+            sp.set_linewidth = frame_width
     
     if label != '':
         fig.text(center, top + labelpad, label, fontsize='large', ha='center')
@@ -199,7 +220,8 @@ def plot_azel(data, task, pd, resolution=100, cbar=True,
 
     return fig
 
-def plot_array_azel(bnd, arr, vscale='each'):
+def plot_array_azel(bnd, arr, labels=None, vscale='each', \
+    subplot_spec=None, fig=None):
     '''
     Plot azels of data from an array, with an arbitrary PD.
     
@@ -216,15 +238,15 @@ def plot_array_azel(bnd, arr, vscale='each'):
     pd = np.array([0.,1.,0.]) # default for no rotation (???)
     nscore = arr.shape[0]
     pds = np.tile(pd[None], (nscore, 1))
-    labels = ['PC %d' % (x + 1) for x in xrange(nscore)]
+    if labels == None:
+        labels = ['%d' % (x + 1) for x in xrange(nscore)]
+    assert(type(labels) == list)
+    assert(type(labels[0]) == str)
+    assert(len(labels) == nscore)
     if vscale == 'each':
         vscale = None
     elif vscale == 'all':
         vscale = (np.nanmin(arr), np.nanmax(arr))
-    fig, gs = plot_many_azel(arr, bnd.tasks, pds,
-                             labels=labels, figsize=(6,8), vscale=vscale)
+    fig, gs = plot_many_azel(arr, bnd.tasks, pds, labels=labels, \
+        figsize=(6,8), vscale=vscale, subplot_spec=subplot_spec, fig=fig)
     return fig
-    
-    
-    
-    
