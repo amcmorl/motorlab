@@ -2,12 +2,15 @@ r_dir = '/home/amcmorl/lib/python/motorlab/tuning/r'
 source(paste(r_dir, 'common_functions.R', sep="/"))
 source(paste(r_dir, 'get_PD.R', sep="/"))
 
-fit_gam = function (data.train, data.test, model, predict, family) {
+fit_gam_plus = function (data.train, data.test, model, predict, family) {
 
   cn = c("y", "t",
     "dx", "dy", "dz",
     "px", "py", "pz",
-    "vx", "vy", "vz", "sp")
+    "vx", "vy", "vz", "sp",
+    "qx", "qy", "qz")
+  # 'q' is second direction set-of-columns,
+  # for fitting dynamic direction along with constant
   colnames(data.train) = cn
   colnames(data.test)  = cn
   
@@ -65,6 +68,9 @@ fit_gam = function (data.train, data.test, model, predict, family) {
   } else if (model == "kvpsX") {
     formula = y~s(t,by=vx) + s(t,by=vy) + s(t,by=vz) + px + py + pz + sp
 
+  } else if (model == "kqX") {
+    formula = y~dx + dy + dz + s(t,by=dx) + s(t,by=dy) + s(t,by=dz)
+    
   } else if (model == 'null') {
     formula = y~1
     

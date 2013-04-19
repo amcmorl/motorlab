@@ -212,6 +212,13 @@ def prepare_regressors(count, pos, time, model=''):
                                   (nvar, nbin * ndim))
         exog = add_column(exog, var_flat)
 
+    # do the constant + dynamic direction model
+    if 'q' in model:
+        assert ('X' in model)
+        # for simplicity's sake, let us call this model 'kqX'
+        assert ('d' not in model)
+        assert ('v' not in model)
+
     if 'k' in model:
         exog = sm.tools.add_constant(exog, prepend=False)
 

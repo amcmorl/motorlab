@@ -1,6 +1,6 @@
 import numpy as np
 import amcmorl_py_tools.proc_tools
-from amcmorl_py_tools.vecgeom import norm, unitvec
+from amcmorl_py_tools.vecgeom import norm, unitvec, unitvec_f2d
 
 def get_vel(pos, time, tax=0, spax=-1):
     ''' Get instantaneous velocity
@@ -41,6 +41,8 @@ def get_dir(pos, tax=-2, spax=-1):
       time axis, defaults to 0
     '''    
     dp = np.diff(pos, axis=tax)
+    if (spax == -1) | (spax == len(pos.shape) - 1):
+        return unitvec_f2d(dp)
     return unitvec(dp, axis=spax)
 
 def get_speed(pos, time, tax=0, spax=-1):

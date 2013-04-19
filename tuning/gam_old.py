@@ -8,9 +8,6 @@ from warnings import warn
 from scipy import stats
 from sklearn.cross_validation import KFold
 
-raise DeprecationWarning('gam_new module is deprecated. '
-    'Switch to at least gam_old or preferably gam_plus.')
-
 import motorlab.kinematics as kin
 
 ro.r('require(mgcv)')

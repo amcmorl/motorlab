@@ -650,4 +650,5 @@ def make_bnd_with_count_from_rate(rate, bnd, \
     if rename_units:
         bndc.unit_names = np.asarray(['unit%d' % (x) \
             for x in range(rate.shape[2])])
+        bndc.lags = np.zeros([rate.shape[2]])
     return bndc
