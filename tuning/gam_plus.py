@@ -554,7 +554,7 @@ def load_gam_unit(file_name):
     return gam_unit
     
 def gam_predict_cv(bnd, models, metadata, nfold=10, family='poisson',
-    verbosity=0):
+    verbosity=0, debug=False):
     '''
     Parameters
     ----------
@@ -598,7 +598,8 @@ def gam_predict_cv(bnd, models, metadata, nfold=10, family='poisson',
     #     ... and put it back again
     #     data[permutation] = permuted    
     ntrial, nbin = count.shape
-    np.random.seed(43)
+    if debug:
+        np.random.seed(43)
     perm = np.random.permutation(range(ntrial))
 
     count_ = count[perm]
@@ -647,7 +648,7 @@ def gam_predict_cv(bnd, models, metadata, nfold=10, family='poisson',
     return gam_unit
 
 def gam_predict_cv2(bnd, models, metadata, nfold=10, family='poisson',
-    verbosity=0):
+    verbosity=0, debug=False):
     '''
     Parameters
     ----------
@@ -691,7 +692,8 @@ def gam_predict_cv2(bnd, models, metadata, nfold=10, family='poisson',
     #     ... and put it back again
     #     data[permutation] = permuted    
     ntrial, nbin = count.shape
-    np.random.seed(43)
+    if debug:
+        np.random.seed(43)
     perm = np.random.permutation(range(ntrial))
 
     count_ = count[perm]
